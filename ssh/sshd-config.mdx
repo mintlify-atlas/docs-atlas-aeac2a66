@@ -1,0 +1,243 @@
+---
+title: Secure /etc/ssh/sshd_config
+description: Harden your SSH server configuration
+---
+
+## Why
+
+SSH is a door into your server. This is especially true if you are opening ports on your router so you can SSH to your server from outside your home network. If it is not secured properly, a bad-actor could use it to gain unauthorized access to your system.
+
+## How It Works
+
+`/etc/ssh/sshd_config` is the default configuration file that the SSH server uses. We will use this file to tell what options the SSH server should use.
+
+## Goals
+
+- A secure SSH configuration following industry best practices
+
+<Warning>
+Make sure you've completed [Create SSH Group For AllowGroups](/ssh/ssh-group) first.
+</Warning>
+
+## Steps
+
+<Steps>
+  <Step title="Backup the SSH configuration">
+    Make a backup of OpenSSH server's configuration file `/etc/ssh/sshd_config` and remove comments to make it easier to read:
+
+    ```bash
+    sudo cp --archive /etc/ssh/sshd_config /etc/ssh/sshd_config-COPY-$(date +"%Y%m%d%H%M%S")
+    sudo sed -i -r -e '/^#|^$/ d' /etc/ssh/sshd_config
+    ```
+  </Step>
+
+  <Step title="Add base security settings">
+    Edit `/etc/ssh/sshd_config` and add these settings that should be applied regardless of your configuration/setup:
+
+    <Warning>
+    SSH does not like duplicate contradicting settings. For example, if you have `ChallengeResponseAuthentication no` and then `ChallengeResponseAuthentication yes`, SSH will respect the first one and ignore the second. 
+    
+    Your `/etc/ssh/sshd_config` file may already have some of the settings/lines below. You will need to manually go through your `/etc/ssh/sshd_config` file and address any duplicate contradicting settings.
+    </Warning>
+
+    ```bash
+    ########################################################################################################
+    # start settings from https://infosec.mozilla.org/guidelines/openssh#modern-openssh-67 as of 2019-01-01
+    ########################################################################################################
+
+    # Supported HostKey algorithms by order of preference.
+    HostKey /etc/ssh/ssh_host_ed25519_key
+    HostKey /etc/ssh/ssh_host_rsa_key
+    HostKey /etc/ssh/ssh_host_ecdsa_key
+
+    KexAlgorithms curve25519-sha256@libssh.org,ecdh-sha2-nistp521,ecdh-sha2-nistp384,ecdh-sha2-nistp256,diffie-hellman-group-exchange-sha256
+
+    Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
+
+    MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512,hmac-sha2-256,umac-128@openssh.com
+
+    # LogLevel VERBOSE logs user's key fingerprint on login. Needed to have a clear audit track of which key was using to log in.
+    LogLevel VERBOSE
+
+    # Use kernel sandbox mechanisms where possible in unprivileged processes
+    # Systrace on OpenBSD, Seccomp on Linux, seatbelt on MacOSX/Darwin, rlimit elsewhere.
+    # Note: This setting is deprecated in OpenSSH 7.5 (https://www.openssh.com/txt/release-7.5)
+    # UsePrivilegeSeparation sandbox
+
+    ########################################################################################################
+    # end settings from https://infosec.mozilla.org/guidelines/openssh#modern-openssh-67 as of 2019-01-01
+    ########################################################################################################
+
+    # don't let users set environment variables
+    PermitUserEnvironment no
+
+    # Log sftp level file access (read/write/etc.) that would not be easily logged otherwise.
+    Subsystem sftp  internal-sftp -f AUTHPRIV -l INFO
+
+    # disable X11 forwarding as X11 is very insecure
+    # you really shouldn't be running X on a server anyway
+    X11Forwarding no
+
+    # disable port forwarding
+    AllowTcpForwarding no
+    AllowStreamLocalForwarding no
+    GatewayPorts no
+    PermitTunnel no
+
+    # don't allow login if the account has an empty password
+    PermitEmptyPasswords no
+
+    # ignore .rhosts and .shosts
+    IgnoreRhosts yes
+
+    # verify hostname matches IP
+    UseDNS yes
+
+    Compression no
+    
+    # TCP keepalive is spoofable (runs outside the encrypted channel)
+    # Use ClientAlive instead (runs inside the encrypted channel)
+    TCPKeepAlive no
+    
+    AllowAgentForwarding no
+    PermitRootLogin no
+
+    # don't allow .rhosts or /etc/hosts.equiv
+    HostbasedAuthentication no
+
+    # OpenSSH 9.1 and later
+    # Enforce a minimum RSA key size of 3072 bits
+    # https://www.keylength.com/en/compare/
+    # RequiredRSASize 3072
+
+    # https://github.com/imthenachoman/How-To-Secure-A-Linux-Server/issues/115
+    HashKnownHosts yes
+    ```
+
+    <Info>
+    **Note on OpenSSH 9.1+**: If you are running OpenSSH 9.1 or later, uncomment the `RequiredRSASize 3072` line. This enforces a minimum RSA key size of 3072 bits and will reject smaller RSA keys during authentication. This only affects RSA keys. If you use ED25519 or ECDSA keys, you are not affected. You can check your key type and size with `ssh-keygen -l -f ~/.ssh/id_rsa`. On older OpenSSH versions, leave the line commented out as it will prevent sshd from starting.
+    </Info>
+  </Step>
+
+  <Step title="Add environment-specific settings">
+    Add these settings and set values as per your requirements:
+
+    | Setting | Valid Values | Example | Description |
+    |---------|-------------|---------|-------------|
+    | **AllowGroups** | local UNIX group name | `AllowGroups sshusers` | Group to allow SSH access to |
+    | **ClientAliveCountMax** | number | `ClientAliveCountMax 3` | Maximum number of client alive messages sent without response |
+    | **ClientAliveInterval** | number of seconds | `ClientAliveInterval 15` | Timeout in seconds before a response request |
+    | **ListenAddress** | local addresses | `ListenAddress 0.0.0.0` or `ListenAddress 192.168.1.100` | Local addresses sshd should listen on |
+    | **LoginGraceTime** | number of seconds | `LoginGraceTime 30` | Time in seconds before login times-out |
+    | **MaxAuthTries** | number | `MaxAuthTries 2` | Maximum allowed attempts to login |
+    | **MaxSessions** | number | `MaxSessions 2` | Maximum number of open sessions |
+    | **MaxStartups** | number | `MaxStartups 2` | Maximum number of login sessions |
+    | **PasswordAuthentication** | `yes` or `no` | `PasswordAuthentication no` | If login with a password is allowed |
+    | **Port** | port number | `Port 22` | Port that sshd should listen on |
+
+    Check `man sshd_config` for more details on what these settings mean.
+
+    <Warning>
+    If you set `PasswordAuthentication no`, make sure you have [SSH key authentication](/ssh/public-private-keys) working first, or you'll lock yourself out!
+    </Warning>
+  </Step>
+
+  <Step title="Check for duplicate settings">
+    Make sure there are no duplicate settings that contradict each other. The below command should not have any output:
+
+    ```bash
+    awk 'NF && $1!~/^(#|HostKey)/{print $1}' /etc/ssh/sshd_config | sort | uniq -c | grep -v ' 1 '
+    ```
+
+    If there is output, you have duplicate settings that need to be resolved.
+  </Step>
+
+  <Step title="Restart SSH service">
+    Restart ssh to apply the changes:
+
+    ```bash
+    sudo service sshd restart
+    ```
+
+    <Warning>
+    Remember to keep that 2nd terminal session open until you verify the configuration works!
+    </Warning>
+  </Step>
+
+  <Step title="Verify the configuration">
+    You can verify the configurations worked with `sshd -T`:
+
+    ```bash
+    sudo sshd -T
+    ```
+
+    You should see output like:
+
+    ```
+    port 22
+    addressfamily any
+    listenaddress [::]:22
+    listenaddress 0.0.0.0:22
+    usepam yes
+    logingracetime 30
+    x11displayoffset 10
+    maxauthtries 2
+    maxsessions 2
+    clientaliveinterval 15
+    clientalivecountmax 3
+    streamlocalbindmask 0177
+    permitrootlogin no
+    ignorerhosts yes
+    ignoreuserknownhosts no
+    hostbasedauthentication no
+    ...
+    subsystem sftp internal-sftp -f AUTHPRIV -l INFO
+    maxstartups 2:30:2
+    permittunnel no
+    ipqos lowdelay throughput
+    rekeylimit 0 0
+    permitopen any
+    ```
+  </Step>
+
+  <Step title="Test SSH access">
+    From a new terminal, try connecting to your server:
+
+    ```bash
+    ssh user@server
+    ```
+
+    If you can connect successfully, your configuration is working correctly!
+  </Step>
+</Steps>
+
+## Key Security Settings Explained
+
+### Authentication & Access Control
+- **AllowGroups**: Only users in the specified group can SSH in
+- **PermitRootLogin no**: Root cannot login directly via SSH
+- **PasswordAuthentication**: Controls if password login is allowed (recommend setting to `no` after setting up key-based auth)
+- **PermitEmptyPasswords no**: Accounts without passwords cannot login
+
+### Cryptography
+- **HostKey**: Specifies which host key algorithms to use (Ed25519 is preferred)
+- **KexAlgorithms**: Key exchange algorithms to use
+- **Ciphers**: Encryption algorithms to use
+- **MACs**: Message authentication code algorithms to use
+
+### Logging & Monitoring
+- **LogLevel VERBOSE**: Logs key fingerprints for better audit tracking
+
+### Feature Restrictions
+- **X11Forwarding no**: Disables X11 forwarding (security risk)
+- **AllowTcpForwarding no**: Disables TCP port forwarding
+- **PermitTunnel no**: Disables tunnel device forwarding
+- **AllowAgentForwarding no**: Disables SSH agent forwarding
+
+## References
+
+- [Mozilla's OpenSSH Guidelines](https://infosec.mozilla.org/guidelines/openssh#modern-openssh-67)
+- [Linux Audit: Harden SSH Configuration](https://linux-audit.com/audit-and-harden-your-ssh-configuration/)
+- [SSH.com: sshd_config Documentation](https://www.ssh.com/ssh/sshd_config/)
+- [ServerFault: OpenSSH internal-sftp vs sftp-server](https://serverfault.com/questions/660160/openssh-difference-between-internal-sftp-and-sftp-server/660325)
+- `man sshd_config`

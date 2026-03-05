@@ -1,0 +1,267 @@
+---
+title: Email Setup
+description: Configure your Linux server to send email notifications using MSMTP or Exim4 with Gmail
+---
+
+Your server needs to be able to send emails for important security alerts and system notifications. This guide covers two approaches: a simple method using MSMTP and a more comprehensive setup using Exim4 with implicit TLS.
+
+## MSMTP (Simple Sendmail) with Google
+
+### Why Use MSMTP
+
+MSMTP provides a simple way to send emails using a Gmail account or other SMTP providers. This is a straightforward solution that's easy to configure.
+
+### Configuration Script
+
+The following script automates the MSMTP setup:
+
+```bash
+#!/bin/bash
+###### PLEASE .... EDIT IT...
+USEREMAIL="usernameemail"
+DOMPROV="gmail.com"
+PWDEMAIL="passwordStrong"  ## ATTENTION DONT USE Special Chars.. like as SPACE # and some others not all. Feel free to test ;)
+MAILPROV="smtp.google.com:583"
+MYMAIL="$USRMAIL@$DOMPROV"
+USERLOC="root"
+#######
+apt install -y msmtp
+ln -s /usr/bin/msmtp /usr/sbin/sendmail
+#wget http://www.cacert.org/revoke.crl -O /etc/ssl/certs/revoke.crl
+#chmod 644 /etc/ssl/certs/revoke.crl
+touch /root/.msmtprc
+cat <<EOF> .msmtprc
+defaults
+account gmail
+host $MAILPROV
+port $MAILPORT
+#proxy_host 127.0.0.1
+#proxy_port 9001
+from $MYEMAIL
+timeout off 
+protocol smtp
+#auto_from [(on|off)]
+#from envelope_from
+#maildomain [domain]
+auth on
+user $USRMAIL
+passwordeval "gpg -q --for-your-eyes-only --no-tty -d /root/msmtp-mail.gpg"
+#passwordeval "gpg --quiet --for-your-eyes-only --no-tty --decrypt /root/msmtp-mail.gpg"
+tls on
+tls_starttls on
+tls_trust_file /etc/ssl/certs/ca-certificates.crt
+#tls_crl_file /etc/ssl/certs/revoke.crl
+#tls_fingerprint [fingerprint]
+#tls_key_file [file]
+#tls_cert_file [file]
+tls_certcheck on
+#tls_priorities [priorities]
+#dsn_notify (off|condition)
+#dsn_return (off|amount)
+#domain argument
+#keepbcc off
+logfile /var/log/mail.log
+syslog on
+account default : gmail
+EOF
+chmod 0400 /root/.msmtprc
+
+## In testing .. auto command
+# echo -e "1\n4096\n\ny\n$MYUSRMAIL\n$MYEMAIL\nmy key\nO\n$PWDMAIL\n$PWDMAIL\n" | gpg --full-generate-key 
+##
+gpg --full-generate-key
+gpg --output revoke.asc --gen-revoke $MYEMAIL
+echo -e "$PWDEMAIL\n" | gpg -e -o /root/msmtp-mail.gpg --recipient $MYEMAIL
+echo "export GPG_TTY=\$(tty)" >> .baschrc	
+chmod 400 msmtp-mail.gpg
+
+echo "Hello there" | msmtp --debug $MYEMAIL
+echo"######################
+## MSMTP Configured ##
+######################"
+```
+
+---
+
+## Gmail and Exim4 As MTA With Implicit TLS
+
+### Why Use Exim4 with TLS
+
+Unless you're setting up your own mail server, you need a way to send emails from your server for system alerts and messages. This approach uses implicit TLS, making an encrypted connection from the start rather than upgrading an unencrypted connection.
+
+<Info>
+  **Important:** Google no longer allows using your account's password for authentication. You must enable 2FA and use an app-password.
+</Info>
+
+### Benefits
+
+- **Encrypted from start**: Unlike STARTTLS which starts unencrypted then upgrades, this method establishes encrypted TLS connection immediately
+- **Long line support**: Configuration includes fixes for exim4's long line issues
+- **Dedicated account**: Use a Gmail account specific to this server for better security isolation
+
+### Setup Steps
+
+<Steps>
+  <Step title="Install Required Packages">
+    Install exim4, openssl, and ca-certificates:
+
+    ```bash
+    sudo apt install exim4 openssl ca-certificates
+    ```
+  </Step>
+
+  <Step title="Configure exim4">
+    Run the configuration wizard:
+
+    ```bash
+    sudo dpkg-reconfigure exim4-config
+    ```
+
+    Answer the prompts as follows:
+
+    | Prompt | Answer |
+    |--------|--------|
+    | General type of mail configuration | `mail sent by smarthost; no local mail` |
+    | System mail name | `localhost` |
+    | IP-addresses to listen on for incoming SMTP connections | `127.0.0.1; ::1` |
+    | Other destinations for which mail is accepted | (default) |
+    | Visible domain name for local users | `localhost` |
+    | IP address or host name of the outgoing smarthost | `smtp.gmail.com::465` |
+    | Keep number of DNS-queries minimal (Dial-on-Demand)? | `No` |
+    | Split configuration into small files? | `No` |
+  </Step>
+
+  <Step title="Configure Gmail Credentials">
+    Make a backup of the password file:
+
+    ```bash
+    sudo cp --archive /etc/exim4/passwd.client /etc/exim4/passwd.client-COPY-$(date +"%Y%m%d%H%M%S")
+    ```
+
+    Add your Gmail credentials to `/etc/exim4/passwd.client`:
+
+    ```
+    smtp.gmail.com:yourAccount@gmail.com:yourPassword
+    *.google.com:yourAccount@gmail.com:yourPassword
+    ```
+
+    <Note>
+      - Replace `yourAccount@gmail.com` and `yourPassword` with your details
+      - If you have 2FA/MFA enabled, use an app password
+      - Always check `host smtp.gmail.com` for the most up-to-date domains to list
+    </Note>
+
+    Secure the password file:
+
+    ```bash
+    sudo chown root:Debian-exim /etc/exim4/passwd.client
+    sudo chmod 640 /etc/exim4/passwd.client
+    ```
+  </Step>
+
+  <Step title="Generate TLS Certificate">
+    Create a TLS certificate for the encrypted connection:
+
+    ```bash
+    sudo bash /usr/share/doc/exim4-base/examples/exim-gencert
+    ```
+
+    You'll be prompted for certificate details. Enter your information as appropriate.
+  </Step>
+
+  <Step title="Configure TLS Settings">
+    Create `/etc/exim4/exim4.conf.localmacros` with the following content:
+
+    ```
+    MAIN_TLS_ENABLE = 1
+    REMOTE_SMTP_SMARTHOST_HOSTS_REQUIRE_TLS = *
+    TLS_ON_CONNECT_PORTS = 465
+    REQUIRE_PROTOCOL = smtps
+    IGNORE_SMTP_LINE_LENGTH_LIMIT = true
+    ```
+
+    This enables TLS, requires it for smarthost connections, uses port 465, and fixes the long line issue.
+  </Step>
+
+  <Step title="Update Template Configuration">
+    Make a backup of the template:
+
+    ```bash
+    sudo cp --archive /etc/exim4/exim4.conf.template /etc/exim4/exim4.conf.template-COPY-$(date +"%Y%m%d%H%M%S")
+    ```
+
+    Add this block to `/etc/exim4/exim4.conf.template` after the `.ifdef REMOTE_SMTP_SMARTHOST_HOSTS_REQUIRE_TLS ... .endif` block:
+
+    ```
+    .ifdef REQUIRE_PROTOCOL
+      protocol = REQUIRE_PROTOCOL
+    .endif
+    ```
+
+    Add this block inside the `.ifdef MAIN_TLS_ENABLE` block:
+
+    ```
+    .ifdef TLS_ON_CONNECT_PORTS
+      tls_on_connect_ports = TLS_ON_CONNECT_PORTS
+    .endif
+    ```
+  </Step>
+
+  <Step title="Update Configuration and Restart">
+    Apply the changes and restart exim4:
+
+    ```bash
+    sudo update-exim4.conf
+    sudo service exim4 restart
+    ```
+  </Step>
+
+  <Step title="Configure Firewall (if using UFW)">
+    Create `/etc/ufw/applications.d/smtptls`:
+
+    ```
+    [SMTPTLS]
+    title=SMTP through TLS
+    description=This opens up the TLS port 465 for use with SMPT to send e-mails.
+    ports=465/tcp
+    ```
+
+    Allow outbound traffic:
+
+    ```bash
+    sudo ufw allow out smtptls comment 'open TLS port 465 for use with SMPT to send e-mails'
+    ```
+  </Step>
+
+  <Step title="Configure Mail Aliases">
+    Add mail aliases to `/etc/aliases` for local accounts:
+
+    ```
+    user1: user1@gmail.com
+    user2: user2@gmail.com
+    ```
+
+    Add entries for all local accounts that exist on your server.
+  </Step>
+
+  <Step title="Test the Setup">
+    Send a test email and check the logs:
+
+    ```bash
+    echo "test" | mail -s "Test" email@gmail.com
+    sudo tail /var/log/exim4/mainlog
+    ```
+
+    Verify that the email was sent successfully by checking the logs.
+  </Step>
+</Steps>
+
+### Troubleshooting
+
+If exim4 fails to deliver mail due to long lines, ensure you've added `IGNORE_SMTP_LINE_LENGTH_LIMIT = true` to `/etc/exim4/exim4.conf.localmacros` as shown in Step 5.
+
+## References
+
+- [Debian Exim Wiki](https://wiki.debian.org/Exim)
+- [Gmail and Exim4 Configuration](https://wiki.debian.org/GmailAndExim4)
+- [Exim TLS Documentation](https://www.exim.org/exim-html-current/doc/html/spec_html/ch-encrypted_smtp_connections_using_tlsssl.html)

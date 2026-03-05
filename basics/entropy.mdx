@@ -1,0 +1,115 @@
+---
+title: More Secure Random Entropy Pool (WIP)
+description: Improve system entropy for better cryptographic operations
+---
+
+<Warning>
+This section is a **Work In Progress** and may be incomplete or require additional testing and documentation.
+</Warning>
+
+## Why This Matters
+
+Entropy is randomness collected by the operating system from various sources (keyboard timings, mouse movements, disk activity, network traffic). This randomness is crucial for:
+
+- Generating cryptographic keys
+- Creating secure random numbers
+- SSL/TLS operations
+- SSH key generation
+- Password salt generation
+
+Insufficient entropy can weaken cryptographic operations and make your system more vulnerable to attacks.
+
+## What is rng-tools
+
+The `rng-tools` package provides utilities for using hardware random number generators and feeding entropy into the system's random number pool (`/dev/random`).
+
+## Installation and Configuration
+
+<Steps>
+  <Step title="Install rng-tools">
+    On Debian based systems:
+    
+    ```bash
+    sudo apt-get install rng-tools
+    ```
+  </Step>
+
+  <Step title="Configure hardware device">
+    Set the hardware device used to generate random numbers by adding this to `/etc/default/rng-tools`:
+    
+    ```bash
+    HRNGDEVICE=/dev/urandom
+    ```
+    
+    Or use this command:
+    
+    ```bash
+    echo "HRNGDEVICE=/dev/urandom" | sudo tee -a /etc/default/rng-tools
+    ```
+  </Step>
+
+  <Step title="Restart the service">
+    ```bash
+    sudo systemctl stop rng-tools.service
+    sudo systemctl start rng-tools.service
+    ```
+  </Step>
+
+  <Step title="Verify the service is running">
+    ```bash
+    sudo systemctl status rng-tools.service
+    ```
+  </Step>
+</Steps>
+
+## Checking Entropy Levels
+
+You can check your current entropy level:
+
+```bash
+cat /proc/sys/kernel/random/entropy_avail
+```
+
+A value above 1000 is generally good. Values below 200 may cause cryptographic operations to slow down while waiting for more entropy.
+
+## Testing Randomness
+
+To test the quality of random data:
+
+```bash
+cat /dev/random | rngtest -c 1000
+```
+
+This reads 1000 blocks from `/dev/random` and performs statistical tests on the randomness.
+
+<Info>
+For production systems, especially virtualized environments, consider using hardware random number generators (if available) or entropy-gathering daemons like `haveged` instead of or in addition to `rng-tools`.
+</Info>
+
+## Additional Resources
+
+- [What is Entropy and How Do I Get More of It?](https://hackaday.com/2017/11/02/what-is-entropy-and-how-do-i-get-more-of-it/)
+- [Myths about /dev/urandom](https://www.2uo.de/myths-about-urandom)
+- [Arch Linux RNG Tools Guide](https://wiki.archlinux.org/index.php/Rng-tools)
+- [Red Hat Security Guide - Random Number Generator](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/security_guide/sect-security_guide-encryption-using_the_random_number_generator)
+
+## Notes
+
+<CardGroup cols={2}>
+  <Card title="Virtual Machines" icon="server">
+    VMs often have low entropy. Consider using virtio-rng or haveged for better performance.
+  </Card>
+  <Card title="Hardware RNG" icon="microchip">
+    Modern CPUs have hardware RNG (RDRAND). rng-tools can utilize this if available.
+  </Card>
+  <Card title="/dev/random vs /dev/urandom" icon="shuffle">
+    /dev/urandom is generally recommended for most use cases and won't block on low entropy.
+  </Card>
+  <Card title="Monitoring" icon="chart-line">
+    Monitor entropy levels regularly, especially during high-load periods.
+  </Card>
+</CardGroup>
+
+<Warning>
+This section needs additional testing and validation. The configuration above is a starting point but may require adjustments based on your specific system and security requirements.
+</Warning>

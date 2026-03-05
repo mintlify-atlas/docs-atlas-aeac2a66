@@ -1,0 +1,117 @@
+---
+title: Run Applications in a Sandbox with FireJail
+description: Confine applications to isolated environments for enhanced security
+---
+
+## Why This Matters
+
+It's absolutely better, for many applications, to run in a sandbox. Browsers (especially closed source ones) and email clients are highly suggested candidates for sandboxing.
+
+A sandbox restricts an application to a limited set of safe directories and blocks access to the rest of the system.
+
+## When to Use FireJail
+
+FireJail is particularly useful for:
+- Web browsers (Chrome, Firefox, Chromium)
+- Email clients (Evolution, Thunderbird)
+- Media players
+- Any application that processes untrusted content
+
+## Installation
+
+<Steps>
+  <Step title="Install FireJail">
+    On Debian based systems:
+    
+    ```bash
+    sudo apt install firejail firejail-profiles
+    ```
+    
+    <Note>
+    For **Debian 10 Stable**, the official backport is recommended:
+    
+    ```bash
+    sudo apt install -t buster-backports firejail firejail-profiles
+    ```
+    </Note>
+  </Step>
+
+  <Step title="Create symbolic links for applications">
+    To run an application in a sandbox, create a symbolic link in `/usr/local/bin` that points to firejail.
+    
+    Examples for common applications:
+    
+    ```bash
+    sudo ln -s /usr/bin/firejail /usr/local/bin/google-chrome-stable
+    sudo ln -s /usr/bin/firejail /usr/local/bin/firefox
+    sudo ln -s /usr/bin/firejail /usr/local/bin/chromium
+    sudo ln -s /usr/bin/firejail /usr/local/bin/evolution
+    sudo ln -s /usr/bin/firejail /usr/local/bin/thunderbird
+    ```
+    
+    <Info>
+    This works because `/usr/local/bin` typically appears before `/usr/bin` or `/bin` in your system's PATH. When you launch the application, the system finds the symbolic link first and runs firejail instead.
+    </Info>
+  </Step>
+
+  <Step title="Verify sandboxed applications">
+    Run the application normally (via terminal or launcher), then check if it's running in a jail:
+    
+    ```bash
+    firejail --list
+    ```
+    
+    You should see your sandboxed applications listed.
+  </Step>
+</Steps>
+
+## Managing Sandboxed Applications
+
+### Remove Sandboxing
+
+To allow a sandboxed app to run normally again, simply remove the symbolic link:
+
+```bash
+sudo rm /usr/local/bin/firefox
+```
+
+### Custom Profiles
+
+FireJail comes with pre-configured profiles for many applications. You can customize these profiles in:
+
+```
+/etc/firejail/
+```
+
+## How It Works
+
+When you launch a sandboxed application:
+
+1. The system executes the firejail symbolic link
+2. FireJail reads the application name and loads the appropriate profile
+3. FireJail creates an isolated environment with:
+   - Limited filesystem access
+   - Restricted network capabilities (if configured)
+   - Separate process namespace
+4. The application runs within these constraints
+
+## What This Provides
+
+<CardGroup cols={2}>
+  <Card title="Filesystem Isolation" icon="folder">
+    Applications can only access specific directories, preventing unauthorized file access
+  </Card>
+  <Card title="Process Isolation" icon="shield">
+    Sandboxed processes are separated from the rest of the system
+  </Card>
+  <Card title="Network Control" icon="network-wired">
+    Optional network restrictions can prevent unauthorized connections
+  </Card>
+  <Card title="Easy Management" icon="sliders">
+    Simple symlink-based activation and deactivation
+  </Card>
+</CardGroup>
+
+<Warning>
+Some applications may not function correctly when sandboxed, especially those requiring broad system access. Test thoroughly and remove sandboxing if issues arise.
+</Warning>

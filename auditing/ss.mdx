@@ -1,0 +1,155 @@
+---
+title: "ss - Seeing Ports Your Server Is Listening On"
+description: "Identify and monitor which network ports your server is listening on using the ss command"
+---
+
+## Why
+
+Ports are how applications, services, and processes communicate - either locally within your server or with other devices on the network. When applications like SSH or Apache run on your server, they listen for requests on specific ports.
+
+You want to know exactly which ports are open and what services are using them. Unknown open ports could indicate rogue or potentially dangerous services that need to be investigated.
+
+## Goals
+
+- Identify all non-localhost ports that are open and listening for connections
+- Verify that only expected services are listening on the network
+
+## References
+
+- https://www.tecmint.com/find-open-ports-in-linux/
+- `man ss`
+
+## Using ss to List Listening Ports
+
+To see all ports listening for traffic:
+
+```bash
+sudo ss -lntup
+```
+
+Example output:
+```
+Netid  State      Recv-Q Send-Q     Local Address:Port     Peer Address:Port
+udp    UNCONN     0      0                      *:68                  *:*        users:(("dhclient",pid=389,fd=6))
+tcp    LISTEN     0      128                    *:22                  *:*        users:(("sshd",pid=4390,fd=3))
+tcp    LISTEN     0      128                   :::22                 :::*        users:(("sshd",pid=4390,fd=4))
+```
+
+### Switch Explanations
+
+| Switch | Description |
+|--------|-------------|
+| `-l` | Display listening sockets |
+| `-n` | Do not try to resolve service names |
+| `-t` | Display TCP sockets |
+| `-u` | Display UDP sockets |
+| `-p` | Show process information |
+
+## Understanding the Output
+
+Each line in the output shows:
+
+- **Netid** - Protocol (tcp/udp)
+- **State** - Connection state (LISTEN, UNCONN)
+- **Local Address:Port** - Address and port the service is listening on
+  - `*:22` - Listening on all IPv4 interfaces on port 22
+  - `:::22` - Listening on all IPv6 interfaces on port 22
+  - `127.0.0.1:25` - Only listening on localhost (loopback)
+- **Peer Address** - Remote connection details
+- **users** - Process name and PID using the port
+
+<Info>
+Services listening only on `127.0.0.1` (localhost) are not accessible from the network and are generally less of a security concern.
+</Info>
+
+## What to Look For
+
+When reviewing the output:
+
+<Steps>
+  <Step title="Identify all listening ports">
+    Make a list of all ports that are listening on network interfaces (not just localhost).
+  </Step>
+
+  <Step title="Verify expected services">
+    For each listening port, verify:
+    - You know what service is using it
+    - You expect that service to be running
+    - You need that service to be accessible on the network
+  </Step>
+
+  <Step title="Investigate suspicious entries">
+    If you see:
+    - Unknown ports
+    - Unexpected processes
+    - Services you don't recognize
+    - Ports that shouldn't be open
+    
+    Investigate immediately and remediate as necessary.
+  </Step>
+</Steps>
+
+## Common Ports and Services
+
+| Port | Service | Description |
+|------|---------|-------------|
+| 22 | SSH | Secure Shell remote access |
+| 25 | SMTP | Mail server |
+| 80 | HTTP | Web server |
+| 443 | HTTPS | Secure web server |
+| 3306 | MySQL | Database server |
+| 5432 | PostgreSQL | Database server |
+| 53 | DNS | Domain name service |
+
+## Additional ss Commands
+
+```bash
+# Show all established connections
+sudo ss -tnp
+
+# Show listening TCP ports only
+sudo ss -lntp
+
+# Show listening UDP ports only
+sudo ss -lnup
+
+# Show statistics
+sudo ss -s
+
+# Filter by specific port
+sudo ss -lntp 'sport = :22'
+
+# Show all connections to a specific port
+sudo ss -tnp 'sport = :80'
+```
+
+## Regular Auditing
+
+<Tip>
+Regularly audit your listening ports as part of your security routine. Run this check:
+- After installing new software
+- After system updates
+- As part of periodic security reviews
+- When investigating potential security issues
+</Tip>
+
+## Taking Action
+
+If you find unexpected services:
+
+1. **Identify the service**: Note the process name and PID
+2. **Research**: Determine what the service does and why it's running
+3. **Stop if unneeded**:
+   ```bash
+   sudo systemctl stop service-name
+   sudo systemctl disable service-name
+   ```
+4. **Remove if malicious**:
+   ```bash
+   sudo apt remove package-name
+   ```
+5. **Configure firewall**: Ensure your firewall blocks unexpected ports
+
+<Warning>
+Be careful when stopping services. Some system services are required for proper operation. Research before disabling.
+</Warning>

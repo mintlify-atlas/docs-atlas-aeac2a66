@@ -1,0 +1,134 @@
+---
+title: Securing /proc
+description: Hide process information from other users by configuring /proc with hidepid
+---
+
+## Why This Matters
+
+By default, Linux systems allow all local users to see information about all processes running on the system, including processes from other users. This could include sensitive details like:
+- Command line arguments (which may contain passwords or tokens)
+- Environment variables
+- Open files and network connections
+- Process owners and activity
+
+By applying the `hidepid` option to `/proc`, we can prevent users from seeing other users' process information.
+
+<Warning>
+This may break on some `systemd` systems. If you experience issues with system services after applying this configuration, you may need to revert the changes.
+
+See the troubleshooting section below for more details.
+</Warning>
+
+## Configuration
+
+<Steps>
+  <Step title="Backup /etc/fstab">
+    Create a timestamped backup:
+    
+    ```bash
+    sudo cp --archive /etc/fstab /etc/fstab-COPY-$(date +"%Y%m%d%H%M%S")
+    ```
+  </Step>
+
+  <Step title="Add hidepid mount option">
+    Add this line to `/etc/fstab` to mount `/proc` with `hidepid=2`:
+    
+    ```
+    proc     /proc     proc     defaults,hidepid=2     0     0
+    ```
+    
+    Or use this command:
+    
+    ```bash
+    echo -e "\nproc     /proc     proc     defaults,hidepid=2     0     0" | sudo tee -a /etc/fstab
+    ```
+  </Step>
+
+  <Step title="Apply the changes">
+    You can either reboot the system:
+    
+    ```bash
+    sudo reboot now
+    ```
+    
+    Or remount `/proc` without rebooting:
+    
+    ```bash
+    sudo mount -o remount,hidepid=2 /proc
+    ```
+  </Step>
+</Steps>
+
+## Understanding hidepid Options
+
+The `hidepid` mount option accepts these values:
+
+| Value | Behavior |
+|-------|----------|
+| `hidepid=0` | Default - all users can see all processes |
+| `hidepid=1` | Users cannot access `/proc/<pid>` directories of processes they don't own (limited information hiding) |
+| `hidepid=2` | Users cannot see processes they don't own at all (recommended) |
+
+## Verification
+
+After applying the configuration:
+
+1. As a normal user, try to list processes:
+   ```bash
+   ps aux
+   ```
+   You should only see your own processes.
+
+2. Check the mount options:
+   ```bash
+   mount | grep proc
+   ```
+   You should see `hidepid=2` in the options.
+
+## Troubleshooting
+
+### systemd Services Failing
+
+Some systemd services may need access to `/proc` information for all processes. If services fail after enabling `hidepid=2`, you have a few options:
+
+1. **Use hidepid=1 instead** (less restrictive)
+2. **Create a group exception** (systemd 232+):
+   ```bash
+   proc     /proc     proc     defaults,hidepid=2,gid=proc_monitor     0     0
+   ```
+   Then add service users to the `proc_monitor` group.
+
+3. **Revert the changes** if critical services break:
+   ```bash
+   sudo sed -i '/hidepid/d' /etc/fstab
+   sudo mount -o remount /proc
+   ```
+
+<Info>
+The most commonly affected services are monitoring tools (like Nagios, Zabbix) and process managers that need to see all system processes.
+</Info>
+
+## What This Does
+
+With `hidepid=2` configured:
+- Users can only see their own processes in tools like `ps`, `top`, and `/proc`
+- Sensitive information in process arguments is hidden from other users
+- System users and services with elevated privileges can still see all processes
+- Attackers who compromise a user account have less reconnaissance information
+
+## Security Benefits
+
+<CardGroup cols={2}>
+  <Card title="Information Hiding" icon="eye-slash">
+    Prevents users from seeing sensitive data in other users' process arguments
+  </Card>
+  <Card title="Reduced Reconnaissance" icon="binoculars">
+    Limits what attackers can learn about the system through a compromised account
+  </Card>
+  <Card title="Privacy" icon="lock">
+    Users can't spy on what other users are running
+  </Card>
+  <Card title="Defense in Depth" icon="shield">
+    Adds another layer of isolation between user accounts
+  </Card>
+</CardGroup>

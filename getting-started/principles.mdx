@@ -1,0 +1,48 @@
+---
+title: "Identify Your Principles"
+description: "Define your threat model and security requirements before securing your Linux server"
+---
+
+Before you start securing your Linux server, you'll want to identify what your principles are. Understanding your [threat model](https://en.wikipedia.org/wiki/Threat_model) is crucial to implementing the right security measures.
+
+## Questions to Consider
+
+Think about the following questions to help define your security approach:
+
+<Steps>
+  <Step title="Why do you want to secure your server?">
+    Understanding your motivation helps determine the level of security you need to implement.
+  </Step>
+  
+  <Step title="How much security do you want or not want?">
+    More security often means more complexity. Find the right balance for your use case.
+  </Step>
+  
+  <Step title="How much convenience are you willing to compromise?">
+    Security and convenience are often at odds. Decide where your priorities lie.
+  </Step>
+  
+  <Step title="What are the threats you want to protect against?">
+    Consider the specifics of your situation:
+    
+    - Is physical access to your server/network a possible attack vector?
+    - Will you be opening ports on your router so you can access your server from outside your home?
+    - Will you be hosting a file share on your server that will be mounted on a desktop class machine? What is the possibility of the desktop machine getting infected and, in turn, infecting the server?
+  </Step>
+</Steps>
+
+## Recovery Plan
+
+<Warning>
+Do you have a means of recovering if your security implementation locks you out of your own server? For example, you disabled root login or password protected GRUB.
+
+Always have a backup plan before implementing security measures that could lock you out.
+</Warning>
+
+## Key Takeaway
+
+These are just **a few things** to think about. Before you start securing your server you will want to understand what you're trying to protect against and why so you know what you need to do.
+
+<Note>
+Take time to document your threat model and security requirements. This will guide your decisions throughout the hardening process.
+</Note>

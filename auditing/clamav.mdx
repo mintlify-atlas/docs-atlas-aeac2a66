@@ -1,0 +1,141 @@
+---
+title: "Anti-Virus Scanning With ClamAV"
+description: "Scan your Linux server for viruses and malware using ClamAV antivirus software"
+---
+
+<Warning>
+This section is a work in progress and may be incomplete. The instructions provided should work, but additional details and explanations may be added in future updates.
+</Warning>
+
+## Why
+
+While Linux is less susceptible to viruses than other operating systems, it's not immune. ClamAV helps detect viruses, malware, and malicious files that could harm your system or be transmitted to other systems.
+
+## How It Works
+
+ClamAV consists of several components:
+
+- **ClamAV** - The virus scanner itself
+- **ClamAV-Freshclam** - A service that keeps virus definitions updated automatically
+- **ClamAV-Daemon** - Keeps the `clamd` process running to make scanning faster
+
+## Goals
+
+- ClamAV installed and configured for manual or scheduled virus scanning
+- Automatic virus definition updates
+
+## Notes
+
+- These instructions **do not** configure the ClamAV daemon service for real-time monitoring
+- The `clamd` daemon is primarily useful if you're running a mail server
+- For most servers, scanning files manually or on a schedule is sufficient
+- ClamAV does not provide real-time file monitoring
+
+## References
+
+- https://www.clamav.net/documents/installation-on-debian-and-ubuntu-linux-distributions
+- https://wiki.debian.org/ClamAV
+- https://www.osradar.com/install-clamav-debian-9-ubuntu-18/
+- https://www.lisenet.com/2014/automate-clamav-to-perform-daily-system-scan-and-send-email-notifications-on-linux/
+- https://www.howtoforge.com/tutorial/configure-clamav-to-scan-and-notify-virus-and-malware/
+
+## Installation and Setup
+
+<Steps>
+  <Step title="Install ClamAV">
+    On Debian based systems:
+
+    ```bash
+    sudo apt install clamav clamav-freshclam clamav-daemon
+    ```
+  </Step>
+
+  <Step title="Configure freshclam">
+    Make a backup of `clamav-freshclam`'s configuration file:
+
+    ```bash
+    sudo cp --archive /etc/clamav/freshclam.conf /etc/clamav/freshclam.conf-COPY-$(date +"%Y%m%d%H%M%S")
+    ```
+
+    The default settings are probably sufficient, but you can customize them by editing `/etc/clamav/freshclam.conf` or using:
+
+    ```bash
+    sudo dpkg-reconfigure clamav-freshclam
+    ```
+
+    <Note>
+    The default settings update virus definitions 24 times per day. To change the interval, check the `Checks` setting in `/etc/clamav/freshclam.conf`.
+    </Note>
+  </Step>
+
+  <Step title="Start the freshclam service">
+    Start the automatic virus definition updater:
+
+    ```bash
+    sudo service clamav-freshclam start
+    ```
+
+    Verify it's running:
+
+    ```bash
+    sudo service clamav-freshclam status
+    ```
+
+    You should see it downloading virus definition databases.
+  </Step>
+
+  <Step title="Configure clamav-daemon (optional)">
+    Make a backup of the daemon configuration:
+
+    ```bash
+    sudo cp --archive /etc/clamav/clamd.conf /etc/clamav/clamd.conf-COPY-$(date +"%Y%m%d%H%M%S")
+    ```
+
+    Customize settings by editing `/etc/clamav/clamd.conf` or using:
+
+    ```bash
+    sudo dpkg-reconfigure clamav-daemon
+    ```
+  </Step>
+</Steps>
+
+## Scanning Files and Folders
+
+### Using clamscan
+
+To scan files and folders, use the `clamscan` program:
+
+```bash
+# Scan a single file
+clamscan /path/to/file
+
+# Scan a directory recursively
+clamscan -r /path/to/folder
+
+# Only print infected files
+clamscan -r -i /path/to/folder
+```
+
+<Warning>
+- `clamscan` runs as the user executing it and needs read permissions to scan files
+- **Avoid running `clamscan` as root** - if a file is actually a virus, it could exploit root privileges
+- Consider creating a dedicated user for virus scanning operations
+</Warning>
+
+### Common Options
+
+| Option | Description |
+|--------|-------------|
+| `-r` | Scan directories recursively |
+| `-i` | Only print infected files |
+| `-l FILE` | Save scan report to FILE |
+| `--remove` | Remove infected files |
+| `--move=DIRECTORY` | Move infected files to DIRECTORY |
+
+<Tip>
+Check `man clamscan` for more options and detailed usage information.
+</Tip>
+
+## Automated Scanning
+
+You can create a cron job to scan your system regularly. Many guides provide sample scripts for automated scanning with email notifications. Check the references above for examples.

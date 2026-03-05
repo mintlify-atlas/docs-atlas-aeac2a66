@@ -1,122 +1,106 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "How To Secure A Linux Server",
+  "theme": "aspen",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
-  },
-  "favicon": "/favicon.svg",
-  "navigation": {
-    "tabs": [
-      {
-        "tab": "Guides",
-        "groups": [
-          {
-            "group": "Getting started",
-            "pages": [
-              "index",
-              "quickstart",
-              "development"
-            ]
-          },
-          {
-            "group": "Customization",
-            "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "API reference",
-        "groups": [
-          {
-            "group": "API documentation",
-            "pages": [
-              "api-reference/introduction"
-            ]
-          },
-          {
-            "group": "Endpoint examples",
-            "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
-            ]
-          }
-        ]
-      }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "primary": "#DC143C",
+    "light": "#DC143C",
+    "dark": "#DC143C"
   },
   "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
     "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "type": "github",
+      "href": "https://github.com/imthenachoman/How-To-Secure-A-Linux-Server"
     }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/imthenachoman/How-To-Secure-A-Linux-Server"
     }
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Overview",
+        "pages": [
+          "introduction",
+          "guide-overview",
+          "contributing"
+        ]
+      },
+      {
+        "group": "Getting Started",
+        "pages": [
+          "getting-started/principles",
+          "getting-started/picking-distribution",
+          "getting-started/installation",
+          "getting-started/requirements",
+          "getting-started/ansible"
+        ]
+      },
+      {
+        "group": "SSH Security",
+        "pages": [
+          "ssh/overview",
+          "ssh/public-private-keys",
+          "ssh/ssh-group",
+          "ssh/sshd-config",
+          "ssh/diffie-hellman",
+          "ssh/two-factor-auth"
+        ]
+      },
+      {
+        "group": "Basic Security",
+        "pages": [
+          "basics/sudo",
+          "basics/su",
+          "basics/firejail",
+          "basics/ntp",
+          "basics/proc",
+          "basics/passwords",
+          "basics/updates",
+          "basics/entropy",
+          "basics/panic-password"
+        ]
+      },
+      {
+        "group": "Network Security",
+        "pages": [
+          "network/ufw",
+          "network/psad",
+          "network/fail2ban",
+          "network/crowdsec"
+        ]
+      },
+      {
+        "group": "Auditing & Monitoring",
+        "pages": [
+          "auditing/aide",
+          "auditing/clamav",
+          "auditing/rkhunter",
+          "auditing/chkrootkit",
+          "auditing/logwatch",
+          "auditing/ss",
+          "auditing/lynis",
+          "auditing/ossec"
+        ]
+      },
+      {
+        "group": "Advanced Hardening",
+        "pages": [
+          "advanced/kernel-sysctl",
+          "advanced/nginx",
+          "advanced/danger-zone"
+        ]
+      },
+      {
+        "group": "Additional Resources",
+        "pages": [
+          "resources/email-setup",
+          "resources/iptables-logging",
+          "resources/helpful-links"
+        ]
+      }
+    ]
   }
 }

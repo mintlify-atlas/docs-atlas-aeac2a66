@@ -1,0 +1,306 @@
+---
+title: "OSSEC - Host Intrusion Detection"
+description: "Monitor and protect your server with OSSEC Host Intrusion Detection System (HIDS)"
+---
+
+## Why
+
+From [https://github.com/ossec/ossec-hids](https://github.com/ossec/ossec-hids):
+
+> OSSEC is a full platform to monitor and control your systems. It mixes together all the aspects of HIDS (host-based intrusion detection), log monitoring and SIM/SIEM together in a simple, powerful and open source solution.
+
+OSSEC provides comprehensive host intrusion detection, log analysis, file integrity monitoring, rootkit detection, and real-time alerting.
+
+## Goals
+
+- OSSEC-HIDS installed and monitoring your server
+- Active intrusion detection and alerting
+
+## How It Works
+
+OSSEC monitors your system by:
+- **Log Analysis** - Analyzing log files for suspicious activity
+- **File Integrity Monitoring** - Detecting unauthorized file changes
+- **Rootkit Detection** - Scanning for rootkits and malware
+- **Real-time Alerting** - Notifying you of security events
+- **Active Response** - Automatically responding to threats
+
+## References
+
+- https://www.ossec.net/docs/
+- https://github.com/ossec/ossec-hids
+
+## Installation and Setup
+
+<Steps>
+  <Step title="Install build dependencies">
+    Install required packages for building OSSEC from source:
+
+    ```bash
+    sudo apt install -y libz-dev libssl-dev libpcre2-dev build-essential libsystemd-dev
+    ```
+  </Step>
+
+  <Step title="Download OSSEC">
+    Download the latest OSSEC source:
+
+    ```bash
+    wget https://github.com/ossec/ossec-hids/archive/3.7.0.tar.gz
+    tar xzf 3.7.0.tar.gz
+    cd ossec-hids-3.7.0/
+    ```
+
+    <Note>
+    Check the OSSEC GitHub releases page for the latest version number and update the commands accordingly.
+    </Note>
+  </Step>
+
+  <Step title="Run the installer">
+    Execute the installation script:
+
+    ```bash
+    sudo ./install.sh
+    ```
+
+    The installer will prompt you with questions about how to configure OSSEC. Answer according to your needs:
+
+    - Installation type: `local` (for a standalone server)
+    - Email notification: Enter your email address
+    - SMTP server: Enter your SMTP server (e.g., localhost if using local MTA)
+    - Enable integrity check: `yes`
+    - Enable rootkit detection: `yes`
+    - Enable active response: `yes` (if desired)
+
+    <Info>
+    For a typical standalone server installation, choose "local" installation type.
+    </Info>
+  </Step>
+
+  <Step title="Start OSSEC">
+    Start the OSSEC service:
+
+    ```bash
+    sudo /var/ossec/bin/ossec-control start
+    ```
+
+    Verify it's running:
+
+    ```bash
+    sudo /var/ossec/bin/ossec-control status
+    ```
+  </Step>
+</Steps>
+
+## Managing OSSEC
+
+### Agent Information
+
+View information about the OSSEC agent:
+
+```bash
+sudo /var/ossec/bin/agent_control -i <AGENT_ID>
+```
+
+<Note>
+By default, the agent ID is `000` for a local installation. You can verify with:
+
+```bash
+sudo /var/ossec/bin/agent_control -l
+```
+</Note>
+
+### Run Integrity/Rootkit Checking
+
+OSSEC automatically runs rootkit checks every 2 hours by default. To trigger a manual check:
+
+```bash
+sudo /var/ossec/bin/agent_control -u <AGENT_ID> -r
+```
+
+Replace `<AGENT_ID>` with your agent ID (typically `000`).
+
+## Monitoring Alerts
+
+### View All Alerts
+
+To monitor all OSSEC alerts in real-time:
+
+```bash
+tail -f /var/ossec/logs/alerts/alerts.log
+```
+
+### View Integrity Check Alerts
+
+To see only file integrity monitoring alerts:
+
+```bash
+sudo cat /var/ossec/logs/alerts/alerts.log | grep -A4 -i integrity
+```
+
+### View Rootkit Check Alerts
+
+To see only rootkit detection alerts:
+
+```bash
+sudo cat /var/ossec/logs/alerts/alerts.log | grep -A4 "rootcheck,"
+```
+
+## Understanding Alert Levels
+
+OSSEC uses alert levels to classify events:
+
+| Level | Description |
+|-------|-------------|
+| 0-3 | Informational |
+| 4-7 | Low priority |
+| 8-11 | Medium priority |
+| 12-15 | High priority |
+| 16+ | Critical (requires immediate attention) |
+
+<Tip>
+Focus on alerts with level 7 or higher. These indicate potential security issues that warrant investigation.
+</Tip>
+
+## Configuration
+
+OSSEC's main configuration file is `/var/ossec/etc/ossec.conf`.
+
+Common configuration tasks:
+
+### Email Notifications
+
+Ensure email alerting is configured in `/var/ossec/etc/ossec.conf`:
+
+```xml
+<global>
+  <email_notification>yes</email_notification>
+  <email_to>your@email.com</email_to>
+  <smtp_server>localhost</smtp_server>
+  <email_from>ossec@yourserver.com</email_from>
+</global>
+
+<alerts>
+  <log_alert_level>1</log_alert_level>
+  <email_alert_level>7</email_alert_level>
+</alerts>
+```
+
+### File Integrity Monitoring
+
+Add directories to monitor in `/var/ossec/etc/ossec.conf`:
+
+```xml
+<syscheck>
+  <directories check_all="yes">/etc,/usr/bin,/usr/sbin</directories>
+  <directories check_all="yes">/root</directories>
+  <frequency>3600</frequency>
+</syscheck>
+```
+
+### Log Monitoring
+
+Specify which logs to monitor:
+
+```xml
+<localfile>
+  <log_format>syslog</log_format>
+  <location>/var/log/syslog</location>
+</localfile>
+
+<localfile>
+  <log_format>syslog</log_format>
+  <location>/var/log/auth.log</location>
+</localfile>
+```
+
+After making configuration changes, restart OSSEC:
+
+```bash
+sudo /var/ossec/bin/ossec-control restart
+```
+
+## Active Response
+
+OSSEC can automatically respond to threats. Common active responses include:
+
+- **Blocking IP addresses** after multiple failed login attempts
+- **Disabling user accounts** showing suspicious activity
+- **Executing custom scripts** in response to specific events
+
+Active response is configured in `/var/ossec/etc/ossec.conf` under the `<active-response>` section.
+
+<Warning>
+Be careful with active responses. Improperly configured responses could lock you out of your own system or cause service disruptions.
+</Warning>
+
+## Useful Commands
+
+```bash
+# Start OSSEC
+sudo /var/ossec/bin/ossec-control start
+
+# Stop OSSEC
+sudo /var/ossec/bin/ossec-control stop
+
+# Restart OSSEC
+sudo /var/ossec/bin/ossec-control restart
+
+# Check OSSEC status
+sudo /var/ossec/bin/ossec-control status
+
+# List agents
+sudo /var/ossec/bin/agent_control -l
+
+# View OSSEC configuration
+sudo /var/ossec/bin/ossec-control info
+
+# Test configuration
+sudo /var/ossec/bin/ossec-logtest
+```
+
+## Log Files
+
+Important OSSEC log files:
+
+| File | Description |
+|------|-------------|
+| `/var/ossec/logs/alerts/alerts.log` | All alerts |
+| `/var/ossec/logs/ossec.log` | OSSEC service log |
+| `/var/ossec/logs/archives/archives.log` | Archived events |
+
+## Regular Maintenance
+
+<Steps>
+  <Step title="Review alerts daily">
+    Check OSSEC alerts regularly to identify and respond to security events promptly.
+  </Step>
+
+  <Step title="Update rules">
+    Keep OSSEC rules updated to detect the latest threats:
+
+    ```bash
+    sudo /var/ossec/bin/ossec-control update
+    ```
+  </Step>
+
+  <Step title="Tune alerts">
+    Adjust alert levels and rules to reduce false positives while maintaining security.
+  </Step>
+
+  <Step title="Monitor performance">
+    Ensure OSSEC isn't consuming excessive resources on your server.
+  </Step>
+</Steps>
+
+## Integration with Other Tools
+
+OSSEC works well alongside:
+
+- **Fail2ban** - For automated IP blocking
+- **AIDE** - For additional file integrity monitoring
+- **logwatch** - For complementary log analysis
+- **Firewall** - To act on OSSEC active response triggers
+
+<Tip>
+Combining multiple security tools provides defense in depth. Use OSSEC as part of a comprehensive security strategy.
+</Tip>

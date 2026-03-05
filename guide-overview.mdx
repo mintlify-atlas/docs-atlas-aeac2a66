@@ -1,0 +1,195 @@
+---
+title: Guide Overview
+description: Understanding the scope, structure, and approach of this Linux server security guide
+---
+
+This guide is designed to help you secure a Linux server through practical, actionable steps. Before diving into the technical details, it's important to understand what this guide covers, how it's structured, and the use-case it addresses.
+
+## About This Guide
+
+This guide...
+
+<Note>
+This is a **work in progress** that continues to evolve as new security practices emerge and community members contribute.
+</Note>
+
+### What This Guide IS
+
+- **Focused on at-home Linux servers** - All concepts apply to larger/professional environments, but those use-cases call for more advanced and specialized configurations that are out-of-scope
+- **Distribution agnostic** - Works with most Linux distributions, though examples primarily use Debian-based commands
+- **Organized logically** - Sections are ordered in a way that makes sense (e.g., securing SSH before installing a firewall)
+- **Easy to follow** - Provides copy-and-paste code snippets that you can use directly (with minor modifications)
+
+### What This Guide IS NOT
+
+<Warning>
+This guide assumes you already know the basics of Linux. It does not teach you how to install Linux, use the command line, or perform basic system administration tasks.
+</Warning>
+
+- **Not a Linux tutorial** - Check [Linux Journey](https://linuxjourney.com/) if you're new to Linux
+- **Not comprehensive security training** - Doesn't cover all aspects of system security (e.g., physical security is out of scope)
+- **Not a deep dive into tools** - Covers bare necessities to get you started and make you hungry to learn more
+- **Not required to be followed in order** - Though recommended, as some sections depend on previous ones
+
+### Approach
+
+<Steps>
+  <Step title="Understand the context">
+    Each section explains **why** something matters before showing you **how** to do it
+  </Step>
+  
+  <Step title="Follow practical steps">
+    Code snippets and commands are provided that you can adapt to your needs
+  </Step>
+  
+  <Step title="Verify your work">
+    While snippets automate changes, you should verify they worked as expected
+  </Step>
+</Steps>
+
+<Tip>
+Keep your favorite text editor handy - you'll need to modify some commands before pasting them (e.g., usernames, paths, etc.).
+</Tip>
+
+## My Use-Case
+
+There are many types of servers and different use-cases. While this guide aims to be as generic as possible, some things may not apply to all scenarios. Use your best judgment when going through this guide.
+
+To help put context to many of the topics covered, here's the reference configuration:
+
+<CardGroup cols={2}>
+  <Card title="Hardware" icon="server">
+    - Desktop class computer
+    - Single NIC (network interface card)
+  </Card>
+  
+  <Card title="Network" icon="network-wired">
+    - Consumer grade router
+    - Dynamic WAN IP from ISP
+    - IPv4 for WAN and LAN
+    - NAT on the LAN
+  </Card>
+  
+  <Card title="Access" icon="key">
+    - SSH access from remote locations
+    - Unknown computers and networks
+    - Friends' houses, coffee shops, etc.
+  </Card>
+  
+  <Card title="Security Goal" icon="shield">
+    - Secure remote administration
+    - Protection from internet threats
+    - Defense in depth approach
+  </Card>
+</CardGroup>
+
+<Info>
+If your use-case differs significantly (e.g., you have a static IP, multiple NICs, or only access from a known location), some recommendations may need adjustment.
+</Info>
+
+## Editing Configuration Files - For The Lazy
+
+I am very lazy and do not like to edit files by hand if I don't need to. I also assume everyone else is just like me. 😊
+
+So, when and where possible, this guide provides `code` snippets to quickly do what is needed, like add or change a line in a configuration file.
+
+### How the Snippets Work
+
+The code snippets use basic Linux commands:
+
+<CardGroup cols={2}>
+  <Card title="echo" icon="terminal">
+    Outputs text that can be redirected to files
+  </Card>
+  
+  <Card title="cat" icon="file">
+    Concatenates and displays file contents
+  </Card>
+  
+  <Card title="sed" icon="pencil">
+    Stream editor for find/replace operations
+  </Card>
+  
+  <Card title="awk" icon="code">
+    Pattern scanning and text processing
+  </Card>
+  
+  <Card title="grep" icon="search">
+    Searches for patterns in text
+  </Card>
+</CardGroup>
+
+<Note>
+How these commands work in detail is out of scope - the `man` pages are your friend if you want to learn more.
+</Note>
+
+### Important Caveats
+
+<Warning>
+The code snippets **do not** validate/verify the change went through. You need to verify that the line was actually added or changed.
+</Warning>
+
+**Not all changes can be automated** with code snippets. Some changes require manual editing:
+
+- INI-style configuration files where context matters
+- Complex multi-line configurations
+- Files that require specific formatting
+
+For these cases, use your favorite Linux text editor (`nano`, `vim`, `vi`, etc.).
+
+### Before Using Snippets
+
+<Steps>
+  <Step title="Backup first">
+    The guide includes backup commands before each change - always run them
+  </Step>
+  
+  <Step title="Review the command">
+    Understand what the snippet does before running it
+  </Step>
+  
+  <Step title="Modify as needed">
+    Replace usernames, paths, or values specific to your setup
+  </Step>
+  
+  <Step title="Verify after">
+    Check that the change was applied correctly
+  </Step>
+</Steps>
+
+<Tip>
+All steps in this guide include backup commands before making changes. Never skip the backup step!
+</Tip>
+
+## Key Principles
+
+### Distribution Agnostic
+
+This guide works with most Linux distributions, but there are some considerations:
+
+- **Package managers differ** - Examples use `apt` (Debian/Ubuntu), but other distros use `yum`, `dnf`, `pacman`, etc.
+- **File paths may vary** - Check your distribution's documentation if you encounter issues
+- **Default configurations differ** - Some distros have different defaults
+
+<Info>
+The guide is tested primarily on Debian. If you find something that doesn't work on your distribution, contributions are welcome!
+</Info>
+
+### Security First
+
+- **Minimal installation** - Only install what you absolutely need
+- **Defense in depth** - Multiple layers of security
+- **Assume breach** - Plan for what happens if one layer fails
+- **Keep updated** - Security patches are critical
+
+### Practical Focus
+
+This guide prioritizes:
+
+1. **Effectiveness** - Does it actually improve security?
+2. **Practicality** - Can it be implemented by most users?
+3. **Maintainability** - Can you keep it running long-term?
+
+<Tip>
+Read through the entire guide before starting. Your specific use-case might require skipping certain sections or changing the order.
+</Tip>

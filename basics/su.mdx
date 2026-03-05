@@ -1,0 +1,77 @@
+---
+title: Limit Who Can Use su
+description: Restrict su command access to only authorized users for enhanced security
+---
+
+## Why This Matters
+
+`su` also lets accounts run commands as other accounts, including **root**. We want to make sure that only the accounts we want can use `su`.
+
+While `sudo` is more commonly used, `su` provides another path to root access that should be secured.
+
+## Configuration
+
+<Steps>
+  <Step title="Create a group for su users">
+    Create a dedicated group for users who can use su:
+    
+    ```bash
+    sudo groupadd suusers
+    ```
+  </Step>
+
+  <Step title="Add authorized users to the group">
+    Add each account that needs su privileges:
+    
+    ```bash
+    sudo usermod -a -G suusers user1
+    sudo usermod -a -G suusers user2
+    sudo usermod -a -G suusers user3
+    ```
+    
+    You'll need to do this for every account on your server that needs su privileges.
+  </Step>
+
+  <Step title="Restrict su binary access">
+    Make the `/bin/su` binary only executable by members of the `suusers` group:
+    
+    ```bash
+    sudo dpkg-statoverride --update --add root suusers 4750 /bin/su
+    ```
+    
+    This command:
+    - Sets ownership to root
+    - Sets group to suusers
+    - Sets permissions to 4750 (setuid, rwxr-x---)
+    - Only group members can execute the binary
+  </Step>
+</Steps>
+
+## Verification
+
+To verify the permissions were set correctly:
+
+```bash
+ls -l /bin/su
+```
+
+You should see output similar to:
+```
+-rwsr-x--- 1 root suusers 63568 Jan 10 12:00 /bin/su
+```
+
+<Info>
+The `s` in the permissions indicates the setuid bit is set, allowing the binary to run with the owner's (root's) privileges when executed by authorized group members.
+</Info>
+
+## What This Does
+
+By restricting access to the `su` binary:
+- Only users in the `suusers` group can execute `su`
+- Unauthorized users will get a "Permission denied" error
+- You maintain granular control over who can switch users
+- This complements your sudo restrictions for defense in depth
+
+<Warning>
+Ensure at least one account is in the `suusers` group before applying these restrictions, or you may lose the ability to switch users entirely.
+</Warning>

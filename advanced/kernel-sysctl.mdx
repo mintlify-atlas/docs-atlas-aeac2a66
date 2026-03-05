@@ -1,0 +1,271 @@
+---
+title: 'Kernel sysctl Hardening'
+description: 'Advanced Linux kernel hardening through sysctl parameters'
+---
+
+<Warning>
+  **Proceed at Your Own Risk**: Changing kernel settings with sysctl is risky and could break your server. If you don't know what you are doing, don't have the time to debug issues, or just don't want to take the risks, do not follow these steps.
+</Warning>
+
+## Overview
+
+The kernel is the brains of a Linux system. Securing it through sysctl parameters can provide additional hardening against various attacks and improve overall system security.
+
+### Why Sysctl Hardening?
+
+Kernel hardening helps protect against:
+- Spoofing attacks
+- Denial of Service (DOS) attacks
+- Network-based exploits
+- Local privilege escalation
+- Information disclosure
+
+### Important Disclaimer
+
+These settings are compiled from multiple reputable sources. Most of them are for general kernel hardening and performance, while others protect against spoofing and DOS attacks. **Test each setting thoroughly before deploying to production.**
+
+<Note>
+  Documentation for these settings references the Linux 2.2 kernel. Settings may have changed in newer kernels. Always test in a non-production environment first.
+</Note>
+
+## Testing Sysctl Changes
+
+Before making any kernel sysctl change permanent, test it with the sysctl command:
+
+```bash
+sudo sysctl -w [key=value]
+```
+
+**Example:**
+
+```bash
+sudo sysctl -w kernel.ctrl-alt-del=0
+```
+
+<Info>
+  There are no spaces in `key=value`, including before and after the equals sign.
+</Info>
+
+## Making Changes Permanent
+
+Once you have tested a setting and verified it works without breaking your server, make it permanent by adding the values to `/etc/sysctl.conf`:
+
+```bash
+# Example /etc/sysctl.conf
+kernel.ctrl-alt-del = 0
+fs.file-max = 65535
+kernel.sysrq = 0
+```
+
+After updating the file, reload the settings:
+
+```bash
+sudo sysctl -p
+```
+
+<Note>
+  If sysctl has trouble writing any settings, `sysctl -w` or `sysctl -p` will write an error to stderr. You can use this to quickly find invalid settings:
+  ```bash
+  sudo sysctl -p >/dev/null
+  ```
+</Note>
+
+## Sysctl Parameters Reference
+
+Below is a comprehensive table of recommended sysctl hardening parameters:
+
+### File System Parameters
+
+| Parameter | Value | Documentation |
+|-----------|-------|---------------|
+| `fs.file-max` | `65535` | [fs.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/fs.txt) |
+| `fs.protected_hardlinks` | `1` | [fs.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/fs.txt) |
+| `fs.protected_symlinks` | `1` | [fs.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/fs.txt) |
+| `fs.suid_dumpable` | `0` | [fs.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/fs.txt) |
+
+### Kernel Parameters
+
+| Parameter | Value | Documentation |
+|-----------|-------|---------------|
+| `kernel.core_uses_pid` | `1` | [kernel.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/kernel.txt) |
+| `kernel.ctrl-alt-del` | `0` | [kernel.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/kernel.txt) |
+| `kernel.kptr_restrict` | `2` | [kernel.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/kernel.txt) |
+| `kernel.maps_protect` | `1` | - |
+| `kernel.msgmax` | `65535` | [kernel.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/kernel.txt) |
+| `kernel.msgmnb` | `65535` | [kernel.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/kernel.txt) |
+| `kernel.pid_max` | `65535` | [kernel.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/kernel.txt) |
+| `kernel.randomize_va_space` | `2` | [kernel.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/kernel.txt) |
+| `kernel.shmall` | `268435456` | [kernel.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/kernel.txt) |
+| `kernel.shmmax` | `268435456` | [kernel.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/kernel.txt) |
+| `kernel.sysrq` | `0` | [kernel.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/kernel.txt) |
+
+### Network Core Parameters
+
+| Parameter | Value | Documentation |
+|-----------|-------|---------------|
+| `net.core.default_qdisc` | `fq` | [net.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/net.txt) |
+| `net.core.dev_weight` | `64` | [net.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/net.txt) |
+| `net.core.netdev_max_backlog` | `16384` | [net.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/net.txt) |
+| `net.core.optmem_max` | `65535` | [net.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/net.txt) |
+| `net.core.rmem_default` | `262144` | [net.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/net.txt) |
+| `net.core.rmem_max` | `16777216` | [net.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/net.txt) |
+| `net.core.somaxconn` | `32768` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.core.wmem_default` | `262144` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.core.wmem_max` | `16777216` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+
+### IPv4 Configuration Parameters
+
+| Parameter | Value | Notes | Documentation |
+|-----------|-------|-------|---------------|
+| `net.ipv4.conf.all.accept_redirects` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.all.accept_source_route` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.all.bootp_relay` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.all.forwarding` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.all.log_martians` | `1` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.all.proxy_arp` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.all.rp_filter` | `1` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.all.secure_redirects` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.all.send_redirects` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.default.accept_redirects` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.default.accept_source_route` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.default.forwarding` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.default.log_martians` | `1` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.default.rp_filter` | `1` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.default.secure_redirects` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.default.send_redirects` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.eth0.accept_redirects` | `0` | Change `eth0` to your network interface | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.eth0.accept_source_route` | `0` | Change `eth0` to your network interface | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.eth0.log_martians` | `0` | Change `eth0` to your network interface | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.eth0.rp_filter` | `1` | Change `eth0` to your network interface | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.lo.accept_redirects` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.lo.accept_source_route` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.lo.log_martians` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.conf.lo.rp_filter` | `1` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+
+### IPv4 ICMP Parameters
+
+| Parameter | Value | Documentation |
+|-----------|-------|---------------|
+| `net.ipv4.icmp_echo_ignore_all` | `1` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.icmp_echo_ignore_broadcasts` | `1` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.icmp_ignore_bogus_error_responses` | `1` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+
+### IPv4 General Parameters
+
+| Parameter | Value | Documentation |
+|-----------|-------|---------------|
+| `net.ipv4.ip_forward` | `0` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.ip_local_port_range` | `2000 65000` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.ipfrag_high_thresh` | `262144` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.ipfrag_low_thresh` | `196608` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+
+### IPv4 Neighbor Parameters
+
+| Parameter | Value | Documentation |
+|-----------|-------|---------------|
+| `net.ipv4.neigh.default.gc_interval` | `30` | - |
+| `net.ipv4.neigh.default.gc_thresh1` | `32` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.neigh.default.gc_thresh2` | `1024` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.neigh.default.gc_thresh3` | `2048` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.neigh.default.proxy_qlen` | `96` | - |
+| `net.ipv4.neigh.default.unres_qlen` | `6` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+
+### IPv4 TCP Parameters
+
+| Parameter | Value | Documentation |
+|-----------|-------|---------------|
+| `net.ipv4.route.flush` | `1` | - |
+| `net.ipv4.tcp_congestion_control` | `htcp` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_ecn` | `1` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_fastopen` | `3` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_fin_timeout` | `15` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_keepalive_intvl` | `15` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_keepalive_probes` | `5` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_keepalive_time` | `1800` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_max_orphans` | `16384` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_max_syn_backlog` | `2048` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_max_tw_buckets` | `1440000` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_moderate_rcvbuf` | `1` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_no_metrics_save` | `1` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_orphan_retries` | `0` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_reordering` | `3` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_retries1` | `3` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_retries2` | `15` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_rfc1337` | `1` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_rmem` | `8192 87380 16777216` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_sack` | `0` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_slow_start_after_idle` | `0` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_syn_retries` | `5` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_synack_retries` | `2` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_syncookies` | `1` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_timestamps` | `1` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_tw_recycle` | `0` | - |
+| `net.ipv4.tcp_tw_reuse` | `1` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_window_scaling` | `0` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.tcp_wmem` | `8192 65536 16777216` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+
+### IPv4 UDP Parameters
+
+| Parameter | Value | Documentation |
+|-----------|-------|---------------|
+| `net.ipv4.udp_rmem_min` | `16384` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv4.udp_wmem_min` | `16384` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+
+### IPv6 Configuration Parameters
+
+| Parameter | Value | Notes | Documentation |
+|-----------|-------|-------|---------------|
+| `net.ipv6.conf.all.accept_ra` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv6.conf.all.accept_redirects` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv6.conf.all.accept_source_route` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv6.conf.all.autoconf` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv6.conf.all.forwarding` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv6.conf.default.accept_ra_defrtr` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv6.conf.default.accept_ra_pinfo` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv6.conf.default.accept_ra_rtr_pref` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv6.conf.default.accept_ra` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv6.conf.default.accept_redirects` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv6.conf.default.accept_source_route` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv6.conf.default.autoconf` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv6.conf.default.dad_transmits` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv6.conf.default.forwarding` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv6.conf.default.max_addresses` | `1` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv6.conf.default.router_solicitations` | `0` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv6.conf.eth0.accept_ra` | `0` | Change `eth0` to your network interface | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv6.conf.eth0.autoconf` | `0` | Change `eth0` to your network interface | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv6.ip6frag_high_thresh` | `262144` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv6.ip6frag_low_thresh` | `196608` | - | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+| `net.ipv6.route.flush` | `1` | - | - |
+
+### Unix Domain Socket Parameters
+
+| Parameter | Value | Documentation |
+|-----------|-------|---------------|
+| `net.unix.max_dgram_qlen` | `50` | [ip-sysctl.txt](https://github.com/torvalds/linux/blob/master/Documentation/networking/ip-sysctl.txt) |
+
+### Virtual Memory Parameters
+
+| Parameter | Value | Documentation |
+|-----------|-------|---------------|
+| `vm.dirty_background_ratio` | `5` | [vm.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/vm.txt) |
+| `vm.dirty_ratio` | `30` | [vm.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/vm.txt) |
+| `vm.min_free_kbytes` | `65535` | [vm.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/vm.txt) |
+| `vm.mmap_min_addr` | `4096` | [vm.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/vm.txt) |
+| `vm.overcommit_memory` | `0` | [vm.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/vm.txt) |
+| `vm.overcommit_ratio` | `50` | [vm.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/vm.txt) |
+| `vm.swappiness` | `30` | [vm.txt](https://github.com/torvalds/linux/blob/master/Documentation/sysctl/vm.txt) |
+
+## Additional Resources
+
+This comprehensive list is compiled from multiple trusted sources:
+
+- [Linux Kernel Documentation](https://github.com/torvalds/linux/blob/master/Documentation)
+- [CyberCiti - Linux Kernel Hardening](https://www.cyberciti.biz/faq/linux-kernel-etcsysctl-conf-security-hardening/)
+- [GeekTNT - Sysctl Hardening](https://geektnt.com/sysctl-conf-hardening.html)
+- [Linoxide - Linux Server Protection](https://linoxide.com/how-tos/linux-server-protection/)
+- [CloudPro Zone - Debian Setup Guide](https://cloudpro.zone/index.php/2018/01/30/debian-9-3-server-setup-guide-part-5/)
+- [GitHub - klaver/sysctl](https://github.com/klaver/sysctl/blob/master/sysctl.conf)
+
+<Warning>
+  Always test sysctl changes in a non-production environment before deploying to production systems. Keep backups and have a recovery plan ready.
+</Warning>

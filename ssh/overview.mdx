@@ -1,0 +1,54 @@
+---
+title: SSH Security Overview
+description: Introduction to securing SSH on your Linux server
+---
+
+SSH (Secure Shell) is one of the most critical services on your Linux server. It provides remote access and is often the primary entry point for server administration. Properly securing SSH is essential for protecting your server from unauthorized access.
+
+## What You'll Learn
+
+In this section, you'll learn how to:
+
+- Set up SSH public/private key authentication
+- Create access control groups for SSH users
+- Harden the SSH server configuration
+- Remove weak cryptographic keys
+- Implement two-factor authentication for SSH
+
+## Why SSH Security Matters
+
+SSH is a door into your server. This is especially true if you are opening ports on your router so you can SSH to your server from outside your home network. If it is not secured properly, a bad-actor could use it to gain unauthorized access to your system.
+
+An unsecured SSH service is a playground for bad-actors who want access to your data, or to use your server as another node for their large-scale DDOS attacks.
+
+<Warning>
+## Important Note Before You Make SSH Changes
+
+It is highly advised you keep a **2nd terminal open** to your server **before you make and apply SSH configuration changes**. 
+
+This way if you lock yourself out of your 1st terminal session, you still have one session connected so you can fix it.
+
+Always test your SSH configuration changes before closing your backup session!
+</Warning>
+
+## Security Approach
+
+The SSH security measures in this guide follow these principles:
+
+1. **Use strong authentication** - Public/private keys are more secure than passwords
+2. **Limit access** - Only allow specific users and groups to connect
+3. **Harden the configuration** - Disable unnecessary features and use strong cryptographic algorithms
+4. **Add additional layers** - Implement 2FA/MFA for extra security
+
+## Prerequisites
+
+Before starting with SSH security:
+
+- You should have SSH access to your server (obviously!)
+- You should have sudo privileges on your server
+- If modifying SSH settings remotely, ensure you have a backup connection method
+- Have your favorite text editor ready for configuration file changes
+
+## Next Steps
+
+Start by setting up [SSH Public/Private Keys](/ssh/public-private-keys) to replace password authentication with key-based authentication.

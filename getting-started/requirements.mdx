@@ -1,0 +1,122 @@
+---
+title: "Pre/Post Installation Requirements"
+description: "Essential tasks to complete before and after installing Linux on your server"
+---
+
+Before you start the hardening process, there are several important tasks you need to complete to ensure your server is properly configured.
+
+## Pre-Installation Requirements
+
+<Steps>
+  <Step title="Disable Port Forwarding">
+    If you're opening ports on your router so you can access your server from the outside, **disable the port forwarding until your system is up and secured**.
+    
+    <Warning>
+    Never expose an unsecured server to the internet. Complete all hardening steps before enabling external access.
+    </Warning>
+  </Step>
+</Steps>
+
+## Post-Installation Requirements
+
+<Steps>
+  <Step title="Verify SSH Access">
+    Unless you're doing everything physically connected to your server, you'll need remote access so **be sure SSH works**.
+    
+    Test SSH connectivity before proceeding:
+    
+    ```bash
+    ssh user@server-ip
+    ```
+  </Step>
+  
+  <Step title="Keep System Updated">
+    Keep your system up-to-date with the latest patches.
+    
+    For Debian-based systems:
+    
+    ```bash
+    sudo apt update && sudo apt upgrade
+    ```
+    
+    For RHEL-based systems:
+    
+    ```bash
+    sudo dnf update
+    ```
+  </Step>
+  
+  <Step title="Perform System-Specific Tasks">
+    Make sure you perform any tasks specific to your setup:
+    
+    - **Configuring network** - Set static IP if needed
+    - **Configuring mount points** in `/etc/fstab`
+    - **Creating the initial user accounts**
+    - **Installing core software** you'll want like `man`
+    - Any other environment-specific configurations
+  </Step>
+  
+  <Step title="Configure Email Alerts">
+    Your server will need to be able to send e-mails so you can get important security alerts.
+    
+    <Note>
+    If you're not setting up a full mail server, you can configure a simple MTA (Mail Transfer Agent) to relay through Gmail or another service. Check the guide's section on Gmail and Exim4 configuration.
+    </Note>
+  </Step>
+  
+  <Step title="Review CIS Benchmarks">
+    I would also recommend you **read** through the [CIS Benchmarks](https://www.cisecurity.org/cis-benchmarks/) before you start with this guide.
+    
+    <Card title="CIS Benchmarks" icon="book">
+    The Center for Internet Security (CIS) provides comprehensive, industry-trusted benchmarks for securing Linux systems.
+    
+    **Recommendation:** Go through this guide first and THEN CIS's guide. That way their recommendations will trump anything in this guide.
+    </Card>
+  </Step>
+</Steps>
+
+## Other Important Notes
+
+<Warning>
+**Critical Reminders:**
+
+- This guide is written and tested on **Debian**. Most things should work on other distributions, but package management commands will differ.
+- File paths and settings may differ slightly between distributions - check your distribution's documentation if you have issues.
+- **Read the whole guide before you start.** Your use-case and/or principles may call for not doing something or for changing the order.
+- Do not **blindly** copy-and-paste without understanding what you're pasting. Some commands will need to be modified for your needs before they'll work - usernames for example.
+</Warning>
+
+## Distribution-Specific Notes
+
+<CodeGroup>
+```bash Debian/Ubuntu
+# Package management
+sudo apt update
+sudo apt install package-name
+
+# Service management
+sudo systemctl restart service-name
+```
+
+```bash RHEL/Rocky/AlmaLinux
+# Package management
+sudo dnf update
+sudo dnf install package-name
+
+# Service management
+sudo systemctl restart service-name
+```
+
+```bash Arch Linux
+# Package management
+sudo pacman -Syu
+sudo pacman -S package-name
+
+# Service management
+sudo systemctl restart service-name
+```
+</CodeGroup>
+
+## Next Steps
+
+Once you've completed all these requirements, you're ready to begin the actual hardening process. The next section will cover securing SSH access to your server.

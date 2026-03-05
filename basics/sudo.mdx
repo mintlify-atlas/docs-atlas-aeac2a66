@@ -1,0 +1,84 @@
+---
+title: Limit Who Can Use sudo
+description: Configure sudo privileges to only allow specific users to run commands as root
+---
+
+## Why This Matters
+
+sudo lets accounts run commands as other accounts, including **root**. We want to make sure that only the accounts we want can use sudo.
+
+## Prerequisites
+
+Your installation may have already done this, or may already have a special group intended for this purpose so check first.
+
+<Note>
+- **Debian** creates the `sudo` group by default
+- **RedHat** creates the `wheel` group
+- Some distributions may configure sudo to not require a password. Check your configuration.
+</Note>
+
+## Configuration
+
+<Steps>
+  <Step title="View existing sudo users">
+    Check which users already have sudo privileges:
+    
+    ```bash
+    cat /etc/group | grep "sudo"
+    ```
+  </Step>
+
+  <Step title="Create a sudo group">
+    Create a dedicated group for sudo users:
+    
+    ```bash
+    sudo groupadd sudousers
+    ```
+  </Step>
+
+  <Step title="Add users to the group">
+    Add each account that needs sudo privileges:
+    
+    ```bash
+    sudo usermod -a -G sudousers user1
+    sudo usermod -a -G sudousers user2
+    sudo usermod -a -G sudousers user3
+    ```
+    
+    Repeat this for every account on your server that needs sudo access.
+  </Step>
+
+  <Step title="Backup the sudoers file">
+    Create a timestamped backup of the configuration:
+    
+    ```bash
+    sudo cp --archive /etc/sudoers /etc/sudoers-COPY-$(date +"%Y%m%d%H%M%S")
+    ```
+  </Step>
+
+  <Step title="Edit sudoers configuration">
+    Use the `visudo` command to safely edit the sudoers file:
+    
+    ```bash
+    sudo visudo
+    ```
+    
+    Add this line to only allow users in the `sudousers` group to use sudo:
+    
+    ```bash
+    %sudousers   ALL=(ALL:ALL) ALL
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+Always use `visudo` to edit the sudoers file. It validates the syntax before saving, preventing configuration errors that could lock you out of sudo access.
+</Warning>
+
+## What This Does
+
+By limiting sudo privileges to a specific group:
+- Only authorized users can execute commands as root
+- You maintain centralized control over privileged access
+- You can easily audit who has sudo capabilities
+- Adding/removing sudo access is a simple group membership change

@@ -1,0 +1,81 @@
+---
+title: "Installing Linux"
+description: "Learn the high-level process for installing Linux on your server"
+---
+
+Installing Linux is out-of-scope for this guide because each distribution does it differently and the installation instructions are usually well documented. If you need help, start with your distribution's documentation.
+
+## High-Level Installation Process
+
+Regardless of the distribution, the high-level process usually goes like this:
+
+<Steps>
+  <Step title="Download the ISO">
+    Download the installation ISO image from your distribution's official website.
+    
+    <Warning>
+    Always verify the checksum of downloaded ISO files to ensure they haven't been tampered with.
+    </Warning>
+  </Step>
+  
+  <Step title="Create Installation Medium">
+    Burn/copy/transfer the ISO to your install medium (e.g. a CD or USB stick).
+    
+    Popular tools for creating bootable USB drives:
+    - **Rufus** (Windows)
+    - **Etcher** (Cross-platform)
+    - **dd** command (Linux)
+  </Step>
+  
+  <Step title="Boot from Installation Medium">
+    Boot your server from your install medium.
+    
+    You may need to change the boot order in your BIOS/UEFI settings.
+  </Step>
+  
+  <Step title="Follow Installation Prompts">
+    Follow the prompts to install the operating system.
+  </Step>
+</Steps>
+
+## Installation Best Practices
+
+### Use Expert Install Mode
+
+<Note>
+Where applicable, use the **expert install option** so you have tighter control of what is running on your server.
+</Note>
+
+The expert or advanced installation mode gives you more control over:
+- Package selection
+- Partitioning scheme
+- Network configuration
+- Service selection
+
+### Minimal Installation
+
+<Card title="Only Install What You Need" icon="minimize">
+**Only install what you absolutely need.** I, personally, do not install anything other than SSH.
+</Card>
+
+The principle of least functionality means:
+- Fewer packages = smaller attack surface
+- Less to maintain and update
+- Better performance
+- Easier troubleshooting
+
+### Enable Disk Encryption
+
+<Warning>
+**Important:** Tick the Disk Encryption option during installation.
+
+Disk encryption protects your data if physical access to the server is compromised. While it adds a small performance overhead, the security benefits far outweigh the costs.
+</Warning>
+
+## After Installation
+
+Once installation is complete, proceed to the [Pre/Post Installation Requirements](/getting-started/requirements) to prepare your system for hardening.
+
+<Note>
+Keep your installation media in a safe place. You may need it for system recovery or troubleshooting.
+</Note>

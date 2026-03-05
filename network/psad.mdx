@@ -1,0 +1,199 @@
+---
+title: iptables Intrusion Detection And Prevention with PSAD
+description: Monitor network activity to detect and prevent potential intrusion attempts
+---
+
+## Why Use PSAD
+
+Even if you have a firewall to guard your doors, it is possible to try brute-forcing your way in any of the guarded doors. We want to monitor all network activity to detect potential intrusion attempts, such has repeated attempts to get in, and block them.
+
+## How It Works
+
+I can't explain it any better than user [FINESEC](https://serverfault.com/users/143961/finesec) did:
+
+<Note>
+Fail2BAN scans log files of various applications such as apache, ssh or ftp and automatically bans IPs that show the malicious signs such as automated login attempts. PSAD on the other hand scans iptables and ip6tables log messages (typically /var/log/messages) to detect and optionally block scans and other types of suspect traffic such as DDoS or OS fingerprinting attempts. It's ok to use both programs at the same time because they operate on different level.
+</Note>
+
+Since we're already using UFW, we'll configure PSAD to work with UFW by telling UFW to log all traffic so PSAD can analyze it.
+
+## Installation and Configuration
+
+<Steps>
+
+<Step title="Install PSAD">
+
+On Debian based systems:
+
+```bash
+sudo apt install psad
+```
+
+</Step>
+
+<Step title="Backup Configuration File">
+
+Make a backup of PSAD's configuration file:
+
+```bash
+sudo cp --archive /etc/psad/psad.conf /etc/psad/psad.conf-COPY-$(date +"%Y%m%d%H%M%S")
+```
+
+</Step>
+
+<Step title="Configure PSAD">
+
+Review and update configuration options in `/etc/psad/psad.conf`. Pay special attention to these settings:
+
+| Setting | Set To |
+|---------|--------|
+| `EMAIL_ADDRESSES` | your email address(es) |
+| `HOSTNAME` | your server's hostname |
+| `EXPECT_TCP_OPTIONS` | `EXPECT_TCP_OPTIONS Y;` |
+| `ENABLE_PSADWATCHD` | `ENABLE_PSADWATCHD Y;` |
+| `ENABLE_AUTO_IDS` | `ENABLE_AUTO_IDS Y;` |
+| `ENABLE_AUTO_IDS_EMAILS` | `ENABLE_AUTO_IDS_EMAILS Y;` |
+
+<Info>
+Check the [PSAD documentation](http://www.cipherdyne.org/psad/docs/config.html) for more details on configuration options.
+</Info>
+
+</Step>
+
+<Step title="Configure UFW to Log Traffic">
+
+<Warning>
+We need to make UFW log all traffic so PSAD can analyze it. This involves editing UFW's rules files.
+</Warning>
+
+Make backups first:
+
+```bash
+sudo cp --archive /etc/ufw/before.rules /etc/ufw/before.rules-COPY-$(date +"%Y%m%d%H%M%S")
+sudo cp --archive /etc/ufw/before6.rules /etc/ufw/before6.rules-COPY-$(date +"%Y%m%d%H%M%S")
+```
+
+Edit **both** files:
+- `/etc/ufw/before.rules`
+- `/etc/ufw/before6.rules`
+
+Add these lines **at the end but before the COMMIT line**:
+
+```bash
+# log all traffic so psad can analyze
+-A INPUT -j LOG --log-tcp-options --log-prefix "[IPTABLES] "
+-A FORWARD -j LOG --log-tcp-options --log-prefix "[IPTABLES] "
+```
+
+<Note>
+We're adding a log prefix to all the iptables logs. This prefix will be useful for separating iptables logs to their own file if needed.
+</Note>
+
+Example of what the end of the file should look like:
+
+```bash
+...
+
+# log all traffic so psad can analyze
+-A INPUT -j LOG --log-tcp-options --log-prefix "[IPTABLES] "
+-A FORWARD -j LOG --log-tcp-options --log-prefix "[IPTABLES] "
+
+# don't delete the 'COMMIT' line or these rules won't be processed
+COMMIT
+```
+
+</Step>
+
+<Step title="Reload UFW and Start PSAD">
+
+Reload UFW and restart PSAD for the changes to take effect:
+
+```bash
+sudo ufw reload
+
+sudo psad -R
+sudo psad --sig-update
+sudo psad -H
+```
+
+</Step>
+
+<Step title="Analyze iptables Rules">
+
+Verify that PSAD can properly analyze your iptables rules:
+
+```bash
+sudo psad --fw-analyze
+```
+
+You should see output like:
+
+```
+[+] Parsing INPUT chain rules.
+[+] Parsing INPUT chain rules.
+[+] Firewall config looks good.
+[+] Completed check of firewall ruleset.
+[+] Results in /var/log/psad/fw_check
+[+] Exiting.
+```
+
+<Note>
+If there were any issues, you will get an e-mail with the error.
+</Note>
+
+</Step>
+
+<Step title="Check PSAD Status">
+
+Verify PSAD is running correctly:
+
+```bash
+sudo psad --Status
+```
+
+Example output:
+
+```
+[-] psad: pid file /var/run/psad/psadwatchd.pid does not exist for psadwatchd on vm
+[+] psad_fw_read (pid: 3444)  %CPU: 0.0  %MEM: 2.2
+    Running since: Sat Feb 16 01:03:09 2019
+
+[+] psad (pid: 3435)  %CPU: 0.2  %MEM: 2.7
+    Running since: Sat Feb 16 01:03:09 2019
+    Command line arguments: [none specified]
+    Alert email address(es): root@localhost
+
+[+] Version: psad v2.4.3
+
+[+] Top 50 signature matches:
+        [NONE]
+
+[+] Top 25 attackers:
+        [NONE]
+
+[+] Top 20 scanned ports:
+        [NONE]
+
+[+] iptables log prefix counters:
+        [NONE]
+
+    Total protocol packet counters:
+
+[+] IP Status Detail:
+        [NONE]
+
+    Total scan sources: 0
+    Total scan destinations: 0
+
+[+] These results are available in: /var/log/psad/status.out
+```
+
+</Step>
+
+</Steps>
+
+## Reference
+
+- [PSAD Official Website](http://www.cipherdyne.org/psad/)
+- [PSAD Configuration Documentation](http://www.cipherdyne.org/psad/docs/config.html)
+- [UFW and PSAD Setup Guide](https://gist.github.com/netson/c45b2dc4e835761fbccc)

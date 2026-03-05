@@ -1,0 +1,267 @@
+---
+title: 'nginx Security'
+description: 'Comprehensive security headers and configuration for nginx web servers'
+---
+
+## Overview
+
+nginx is a high-performance web server and reverse proxy. Properly configuring security headers and settings is essential to protect your web applications from common vulnerabilities and attacks.
+
+This guide covers essential security configurations for nginx that help protect against:
+- Information disclosure
+- Cross-site scripting (XSS)
+- Clickjacking
+- MIME type sniffing
+- And other web-based attacks
+
+## Security Headers Configuration
+
+All the security headers below should be added to your nginx configuration file, typically located at `/etc/nginx/nginx.conf` or within specific server blocks.
+
+### Disable Server Tokens
+
+Prevents nginx from displaying its version number in error pages and HTTP headers, reducing information disclosure.
+
+```nginx
+server_tokens off;
+```
+
+<Info>
+  This setting hides the nginx version from potential attackers, making reconnaissance more difficult.
+  
+  **Reference:** [nginx server_tokens documentation](https://nginx.org/en/docs/http/ngx_http_core_module.html#server_tokens)
+</Info>
+
+### Content Security Policy (CSP)
+
+Defines which resources the browser is allowed to load, providing strong protection against XSS and data injection attacks.
+
+```nginx
+add_header Content-Security-Policy "default-src 'self';" always;
+```
+
+<Note>
+  This is a basic CSP that only allows resources from the same origin. You'll likely need to customize this for your application's specific needs. For example:
+  
+  ```nginx
+  add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://trusted-cdn.com; style-src 'self' 'unsafe-inline';" always;
+  ```
+</Note>
+
+**Learn more:**
+- [Content Security Policy Reference](https://content-security-policy.com/)
+- [MDN CSP Documentation](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP)
+
+### X-Frame-Options
+
+Protects against clickjacking attacks by controlling whether the browser should allow the page to be rendered in a frame or iframe.
+
+```nginx
+add_header X-Frame-Options SAMEORIGIN always;
+```
+
+**Options:**
+- `DENY` - Prevents any domain from framing the content
+- `SAMEORIGIN` - Only allows the current site to frame the content
+- `ALLOW-FROM uri` - Permits only the specified URI to frame the content (deprecated)
+
+<Info>
+  `SAMEORIGIN` is recommended for most applications. Use `DENY` if your site should never be framed.
+  
+  **Reference:** [MDN X-Frame-Options](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options#sameorigin)
+</Info>
+
+### X-XSS-Protection
+
+Enables the browser's built-in XSS filter to detect and block reflected XSS attacks.
+
+```nginx
+add_header X-Xss-Protection "1; mode=block" always;
+```
+
+**Settings breakdown:**
+- `1` - Enables XSS filtering
+- `mode=block` - Blocks the page from rendering if an attack is detected
+
+<Warning>
+  While this header provides some protection, it's considered a legacy feature. Modern browsers rely on Content Security Policy (CSP) for XSS protection. However, including this header still provides defense-in-depth for older browsers.
+</Warning>
+
+**Reference:** [nginx proxy response headers documentation](https://docs.nginx.com/nginx-management-suite/acm/how-to/policies/proxy-response-headers/)
+
+### Referrer-Policy
+
+Controls how much referrer information is included with requests, protecting user privacy.
+
+```nginx
+add_header Referrer-Policy "strict-origin" always;
+```
+
+**Common policies:**
+- `no-referrer` - Never send referrer information
+- `strict-origin` - Send only the origin for cross-origin requests (recommended)
+- `strict-origin-when-cross-origin` - Full URL for same-origin, only origin for cross-origin
+- `same-origin` - Send referrer for same-origin requests only
+
+<Info>
+  `strict-origin` provides a good balance between privacy and functionality.
+  
+  **Reference:** [MDN Referrer-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy#strict-origin)
+</Info>
+
+### Permissions-Policy
+
+Controls which browser features and APIs can be used in the browser, replacing the deprecated Feature-Policy header.
+
+```nginx
+add_header Permissions-Policy "geolocation=(),midi=(),sync-xhr=(),microphone=(),camera=(),magnetometer=(),gyroscope=(),fullscreen=(self),payment=()";
+```
+
+**Common directives:**
+- `geolocation=()` - Disables geolocation API
+- `camera=()` - Disables camera access
+- `microphone=()` - Disables microphone access
+- `fullscreen=(self)` - Allows fullscreen only from same origin
+- `payment=()` - Disables payment request API
+
+<Note>
+  Adjust these permissions based on your application's needs. For example, if you have a video chat application, you'll need to enable camera and microphone:
+  
+  ```nginx
+  add_header Permissions-Policy "camera=(self), microphone=(self)";
+  ```
+</Note>
+
+**Reference:** [MDN Permissions-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy)
+
+### X-Content-Type-Options
+
+Prevents browsers from MIME-sniffing a response away from the declared content-type, which can be exploited to execute malicious code.
+
+```nginx
+add_header X-Content-Type-Options nosniff always;
+```
+
+<Info>
+  This header ensures that browsers respect the `Content-Type` header set by the server, preventing them from guessing the content type.
+  
+  **Reference:** [Wikipedia - Content Sniffing](https://en.wikipedia.org/wiki/Content_sniffing)
+</Info>
+
+## Complete Security Headers Example
+
+Here's a complete example of all security headers combined in an nginx server block:
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name example.com;
+
+    # Disable server tokens
+    server_tokens off;
+
+    # Security headers
+    add_header Content-Security-Policy "default-src 'self';" always;
+    add_header X-Frame-Options SAMEORIGIN always;
+    add_header X-Xss-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin" always;
+    add_header Permissions-Policy "geolocation=(),midi=(),sync-xhr=(),microphone=(),camera=(),magnetometer=(),gyroscope=(),fullscreen=(self),payment=()";
+    add_header X-Content-Type-Options nosniff always;
+
+    # SSL configuration
+    ssl_certificate /path/to/cert.pem;
+    ssl_certificate_key /path/to/key.pem;
+
+    location / {
+        # Your application configuration
+        proxy_pass http://backend;
+    }
+}
+```
+
+## Testing Your Configuration
+
+After applying security headers, test your nginx configuration:
+
+```bash
+# Test configuration syntax
+sudo nginx -t
+
+# Reload nginx if test passes
+sudo systemctl reload nginx
+```
+
+### Verify Headers
+
+You can verify the headers are being sent correctly using curl:
+
+```bash
+curl -I https://your-domain.com
+```
+
+Or use online tools:
+- [Security Headers](https://securityheaders.com/)
+- [Mozilla Observatory](https://observatory.mozilla.org/)
+
+<Warning>
+  Always test configuration changes in a staging environment before deploying to production.
+</Warning>
+
+## Additional Nginx Security Best Practices
+
+### Disable Unnecessary HTTP Methods
+
+```nginx
+if ($request_method !~ ^(GET|POST|HEAD)$ ) {
+    return 405;
+}
+```
+
+### Rate Limiting
+
+Protect against DDoS and brute force attacks:
+
+```nginx
+limit_req_zone $binary_remote_addr zone=general:10m rate=10r/s;
+limit_req_status 429;
+
+server {
+    location / {
+        limit_req zone=general burst=20 nodelay;
+    }
+}
+```
+
+### Hide nginx in Error Pages
+
+```nginx
+server_tokens off;
+more_clear_headers Server;
+```
+
+<Note>
+  The `more_clear_headers` directive requires the `headers-more-nginx-module`.
+</Note>
+
+### SSL/TLS Configuration
+
+For modern SSL/TLS security:
+
+```nginx
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_prefer_server_ciphers on;
+ssl_ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384';
+ssl_session_cache shared:SSL:10m;
+ssl_session_timeout 10m;
+```
+
+## Additional Resources
+
+- [Webdock - Security Headers Guide](https://webdock.io/en/docs/how-guides/security-guides/how-to-configure-security-headers-in-nginx-and-apache)
+- [nginx Official Documentation](https://nginx.org/en/docs/)
+- [OWASP Secure Headers Project](https://owasp.org/www-project-secure-headers/)
+- [Mozilla Web Security Guidelines](https://infosec.mozilla.org/guidelines/web_security)
+
+<Info>
+  Security is a continuous process. Regularly review and update your security configurations as new threats emerge and best practices evolve.
+</Info>

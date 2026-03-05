@@ -1,0 +1,103 @@
+---
+title: Remove Short Diffie-Hellman Keys
+description: Remove weak cryptographic moduli from SSH
+---
+
+## Why
+
+Per [Mozilla's OpenSSH guidelines for OpenSSH 6.7+](https://infosec.mozilla.org/guidelines/openssh#modern-openssh-67), "all Diffie-Hellman moduli in use should be at least 3072-bit-long".
+
+The Diffie-Hellman algorithm is used by SSH to establish a secure connection. The larger the moduli (key size) the stronger the encryption.
+
+## How It Works
+
+SSH uses Diffie-Hellman key exchange to establish secure connections. The strength of this key exchange depends on the size of the moduli used. Smaller moduli (less than 3072 bits) are considered weak and potentially vulnerable to attacks.
+
+The `/etc/ssh/moduli` file contains precomputed Diffie-Hellman groups that SSH can use during key exchange. By removing the shorter, weaker keys from this file, we ensure SSH only uses strong cryptographic parameters.
+
+## Goals
+
+- Remove all Diffie-Hellman keys that are less than 3072 bits long
+
+## Steps
+
+<Steps>
+  <Step title="Backup the moduli file">
+    Make a backup of SSH's moduli file `/etc/ssh/moduli`:
+
+    ```bash
+    sudo cp --archive /etc/ssh/moduli /etc/ssh/moduli-COPY-$(date +"%Y%m%d%H%M%S")
+    ```
+  </Step>
+
+  <Step title="Remove short moduli">
+    Remove moduli shorter than 3072 bits:
+
+    ```bash
+    sudo awk '$5 >= 3071' /etc/ssh/moduli | sudo tee /etc/ssh/moduli.tmp
+    sudo mv /etc/ssh/moduli.tmp /etc/ssh/moduli
+    ```
+
+    This command:
+    - Uses `awk` to filter lines where the 5th field (the moduli size) is >= 3071
+    - Writes the filtered content to a temporary file
+    - Replaces the original file with the filtered version
+  </Step>
+
+  <Step title="Verify the changes">
+    Check that only strong moduli remain:
+
+    ```bash
+    awk '$5 < 3071' /etc/ssh/moduli
+    ```
+
+    This command should return no output, indicating all weak moduli have been removed.
+  </Step>
+
+  <Step title="Restart SSH (optional)">
+    While SSH will pick up the new moduli file automatically for new connections, you can restart SSH to ensure it's using the updated file:
+
+    ```bash
+    sudo service sshd restart
+    ```
+  </Step>
+</Steps>
+
+## Understanding the Moduli File
+
+The `/etc/ssh/moduli` file contains Diffie-Hellman groups in this format:
+
+```
+Time Type Tests Tries Size Generator Modulus
+```
+
+- **Time**: Timestamp when the moduli was generated
+- **Type**: Type of test performed
+- **Tests**: Number of tests performed
+- **Tries**: Number of attempts
+- **Size**: The size of the moduli in bits (this is what we're filtering on)
+- **Generator**: The generator value
+- **Modulus**: The actual modulus value
+
+<Info>
+The 5th field (Size) is what determines the strength of the key exchange. By filtering to keep only entries where this value is >= 3071, we ensure SSH only uses strong cryptographic parameters.
+</Info>
+
+## Security Impact
+
+Removing short Diffie-Hellman keys:
+
+- **Prevents** the use of weak cryptographic parameters
+- **Protects** against attacks on smaller key sizes
+- **Ensures** compliance with modern security standards
+- **May slightly reduce** compatibility with very old SSH clients (though this is unlikely to be an issue)
+
+<Tip>
+This is a one-time operation. However, if SSH is updated and a new moduli file is installed, you may need to repeat this process.
+</Tip>
+
+## References
+
+- [Mozilla's OpenSSH Guidelines](https://infosec.mozilla.org/guidelines/openssh#modern-openssh-67)
+- [Mozilla Key Management Guidelines](https://infosec.mozilla.org/guidelines/key_management)
+- `man moduli`

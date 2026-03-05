@@ -1,0 +1,166 @@
+---
+title: Separate iptables Log File
+description: Configure iptables to log to a dedicated file for easier troubleshooting and monitoring
+---
+
+When you need to troubleshoot firewall issues or review security events, having all iptables logs in their own dedicated file makes finding relevant information much easier than searching through general system logs.
+
+## Why Use a Separate Log File
+
+By default, iptables logs are mixed with other system logs in `/var/log/syslog` or `/var/log/messages`. Separating them provides:
+
+- **Easier troubleshooting**: Quickly find firewall-related events without filtering through unrelated logs
+- **Better organization**: Keep security logs separate from general system logs
+- **Simplified analysis**: Use log analysis tools more effectively on firewall-specific data
+- **Cleaner monitoring**: Monitor firewall activity without noise from other services
+
+## Configuration Steps
+
+<Steps>
+  <Step title="Add Log Prefix to Firewall Rules">
+    First, configure your firewall to prefix all log entries with a unique string. This allows rsyslog to identify and route iptables messages.
+
+    If you're using iptables directly, add `--log-prefix "[IPTABLES] "` to your logging rules.
+
+    <Note>
+      If you followed the PSAD installation steps in this guide, you've already configured this prefix in step 4 of the PSAD setup.
+    </Note>
+  </Step>
+
+  <Step title="Configure rsyslog">
+    Create the file `/etc/rsyslog.d/10-iptables.conf` with the following content:
+
+    ```
+    :msg, contains, "[IPTABLES] " /var/log/iptables.log
+    & stop
+    ```
+
+    This tells rsyslog to:
+    1. Match log messages containing `[IPTABLES]`
+    2. Write them to `/var/log/iptables.log`
+    3. Stop processing (prevent duplicate entries in other logs)
+
+    <Info>
+      If you expect high-volume firewall logging, prefix the filename with a `-` to omit syncing after every write:
+
+      ```
+      :msg, contains, "[IPTABLES] " -/var/log/iptables.log
+      & stop
+      ```
+    </Info>
+
+    **Quick command:**
+
+    ```bash
+    cat << EOF | sudo tee /etc/rsyslog.d/10-iptables.conf
+    :msg, contains, "[IPTABLES] " /var/log/iptables.log
+    & stop
+    EOF
+    ```
+  </Step>
+
+  <Step title="Update PSAD Configuration">
+    Since firewall messages are now in a different file, update PSAD to use the new location.
+
+    Edit `/etc/psad/psad.conf` and set the `IPT_SYSLOG_FILE` parameter:
+
+    ```
+    IPT_SYSLOG_FILE /var/log/iptables.log;
+    ```
+
+    **Quick command:**
+
+    ```bash
+    sudo sed -i -r -e "s/^(IPT_SYSLOG_FILE\s+)([^;]+)(;)$/# \1\2\3       # commented by $(whoami) on $(date +"%Y-%m-%d @ %H:%M:%S")\n\1\/var\/log\/iptables.log\3       # added by $(whoami) on $(date +"%Y-%m-%d @ %H:%M:%S")/" /etc/psad/psad.conf
+    ```
+  </Step>
+
+  <Step title="Restart Services">
+    Apply the changes by restarting PSAD and rsyslog:
+
+    ```bash
+    sudo psad -R
+    sudo psad --sig-update
+    sudo psad -H
+    sudo service rsyslog restart
+    ```
+
+    Alternatively, you can reboot the server to ensure all changes take effect.
+  </Step>
+
+  <Step title="Configure Log Rotation">
+    Prevent the iptables log from consuming too much disk space by configuring log rotation.
+
+    Create `/etc/logrotate.d/iptables` with the following content:
+
+    ```
+    /var/log/iptables.log
+    {
+        rotate 7
+        daily
+        missingok
+        notifempty
+        delaycompress
+        compress
+        postrotate
+            invoke-rc.d rsyslog rotate > /dev/null
+        endscript
+    }
+    ```
+
+    This configuration:
+    - Rotates logs daily
+    - Keeps 7 days of logs
+    - Compresses old logs
+    - Handles missing log files gracefully
+    - Signals rsyslog after rotation
+
+    **Quick command:**
+
+    ```bash
+    cat << EOF | sudo tee /etc/logrotate.d/iptables
+    /var/log/iptables.log
+    {
+        rotate 7
+        daily
+        missingok
+        notifempty
+        delaycompress
+        compress
+        postrotate
+            invoke-rc.d rsyslog rotate > /dev/null
+        endscript
+    }
+    EOF
+    ```
+  </Step>
+</Steps>
+
+## Verifying the Configuration
+
+After completing the setup, verify that iptables logs are being written to the new file:
+
+```bash
+# Check if the log file exists and has recent entries
+sudo tail -f /var/log/iptables.log
+
+# Trigger a firewall event and verify it's logged
+# (This will depend on your firewall rules)
+```
+
+## Customizing the Log Prefix
+
+If you want to use a different log prefix instead of `[IPTABLES]`:
+
+1. Update your firewall rules to use your custom prefix
+2. Update the rsyslog configuration in `/etc/rsyslog.d/10-iptables.conf` to match your prefix
+3. Restart rsyslog
+
+<Note>
+  Remember to update the prefix in all places where it's referenced, including firewall rules, rsyslog configuration, and PSAD configuration.
+</Note>
+
+## References
+
+- [rsyslog Documentation - Actions](https://www.rsyslog.com/doc/v8-stable/configuration/actions.html)
+- [Separate iptables logs with rsyslog](https://blog.shadypixel.com/log-iptables-messages-to-a-separate-file-with-rsyslog/)

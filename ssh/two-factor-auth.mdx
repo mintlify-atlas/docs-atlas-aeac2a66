@@ -1,0 +1,259 @@
+---
+title: 2FA/MFA for SSH
+description: Add two-factor authentication to SSH for enhanced security
+---
+
+## Why
+
+Even though SSH is a pretty good security guard for your doors and windows, it is still a visible door that bad-actors can see and try to brute-force in. Fail2ban will monitor for these brute-force attempts but there is no such thing as being too secure. Requiring two factors adds an extra layer of security.
+
+Using Two-Factor Authentication (2FA) / Multi-Factor Authentication (MFA) requires anyone entering to have **two** keys to enter which makes it harder for bad actors:
+
+1. Their password
+2. A 6 digit token that changes every 30 seconds
+
+Without both keys, they won't be able to get in.
+
+## Why Not
+
+Many folks might find the experience cumbersome or annoying. And, access to your system is dependent on the accompanying authenticator app that generates the code.
+
+## How It Works
+
+On Linux, PAM (Pluggable Authentication Modules) is responsible for authentication. When you log into a server, be it directly from the console or via SSH, the door you came through will send the request to the authentication task of PAM and PAM will ask for and verify your password.
+
+You can customize the rules each door uses. For example, you could have one set of rules when logging in directly from the console and another set of rules for when logging in via SSH.
+
+This section will alter the authentication rules for when logging in via SSH to require both a password and a 6 digit code.
+
+We will use Google's `libpam-google-authenticator` PAM module to create and verify a [TOTP](https://en.wikipedia.org/wiki/Time-based_One-time_Password_algorithm) (Time-based One-Time Password) key.
+
+### The Process
+
+1. User attempts to login via SSH
+2. PAM asks for their password and verifies it
+3. If password is correct, PAM routes the authentication request to `libpam-google-authenticator`
+4. `libpam-google-authenticator` asks for the 6 digit token
+5. If the token is correct, authentication succeeds and user is allowed to log in
+
+## Goals
+
+- 2FA/MFA enabled for all SSH connections
+
+<Note>
+**Important Notes:**
+
+- Before you do this, you should have an idea of how 2FA/MFA works and you'll need an authenticator app on your phone to continue.
+- With the below configuration, a user will only need to enter their 2FA/MFA code if they are logging on with their password but **not** if they are using [SSH public/private keys](/ssh/public-private-keys). Check the documentation on how to change this behavior to suite your requirements.
+</Note>
+
+## Steps
+
+<Steps>
+  <Step title="Install google-authenticator">
+    Install `libpam-google-authenticator`.
+
+    On Debian based systems:
+
+    ```bash
+    sudo apt install libpam-google-authenticator
+    ```
+  </Step>
+
+  <Step title="Generate authentication tokens">
+    **Make sure you're logged in as the ID you want to enable 2FA/MFA for** and **execute** `google-authenticator` to create the necessary token data:
+
+    ```bash
+    google-authenticator
+    ```
+
+    <Warning>
+    Notice this is **not run as root**. Run it as the user you want to enable 2FA for.
+    </Warning>
+
+    You'll see output like:
+
+    ```
+    Do you want authentication tokens to be time-based (y/n) y
+    https://www.google.com/chart?chs=200x200&chld=M|0&cht=qr&chl=otpauth://totp/user@host%3Fsecret%3DR4ZWX34FQKZROVX7AGLJ64684Y%26issuer%3Dhost
+
+    ...
+
+    Your new secret key is: R3NVX3FFQKZROVX7AGLJUGGESY
+    Your verification code is 751419
+    Your emergency scratch codes are:
+      12345678
+      90123456
+      78901234
+      56789012
+      34567890
+
+    Do you want me to update your "/home/user/.google_authenticator" file (y/n) y
+
+    Do you want to disallow multiple uses of the same authentication
+    token? This restricts you to one login about every 30s, but it increases
+    your chances to notice or even prevent man-in-the-middle attacks (y/n) y
+
+    By default, tokens are good for 30 seconds. In order to compensate for
+    possible time-skew between the client and the server, we allow an extra
+    token before and after the current time. If you experience problems with
+    poor time synchronization, you can increase the window from its default
+    size of +-1min (window size of 3) to about +-4min (window size of
+    17 acceptable tokens).
+    Do you want to do so? (y/n) y
+
+    If the computer that you are logging into isn't hardened against brute-force
+    login attempts, you can enable rate-limiting for the authentication module.
+    By default, this limits attackers to no more than 3 login attempts every 30s.
+    Do you want to enable rate-limiting (y/n) y
+    ```
+
+    Select default option (y in most cases) for all the questions it asks.
+
+    <Warning>
+    **Save the emergency scratch codes!** These are one-time use codes you can use if you lose access to your authenticator app.
+    </Warning>
+
+    Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.) to set up the token.
+  </Step>
+
+  <Step title="Configure PAM for SSH">
+    Make a backup of PAM's SSH configuration file `/etc/pam.d/sshd`:
+
+    ```bash
+    sudo cp --archive /etc/pam.d/sshd /etc/pam.d/sshd-COPY-$(date +"%Y%m%d%H%M%S")
+    ```
+
+    Now enable it as an authentication method for SSH by adding this line to `/etc/pam.d/sshd`:
+
+    ```
+    auth       required     pam_google_authenticator.so nullok
+    ```
+
+    <Info>
+    The `nullok` option means users who haven't set up 2FA yet can still login. Once all users have set up 2FA, you can remove this option to make 2FA mandatory.
+    </Info>
+
+    For the lazy (automated approach):
+
+    ```bash
+    echo -e "\nauth       required     pam_google_authenticator.so nullok         # added by $(whoami) on $(date +"%Y-%m-%d @ %H:%M:%S")" | sudo tee -a /etc/pam.d/sshd
+    ```
+  </Step>
+
+  <Step title="Enable challenge-response authentication">
+    Make a backup of SSH's configuration file `/etc/ssh/sshd_config`:
+
+    ```bash
+    sudo cp --archive /etc/ssh/sshd_config /etc/ssh/sshd_config-COPY-$(date +"%Y%m%d%H%M%S")
+    ```
+
+    Tell SSH to leverage challenge-response authentication by adding or editing this line in `/etc/ssh/sshd_config`:
+
+    ```
+    ChallengeResponseAuthentication yes
+    ```
+
+    For the lazy (automated approach):
+
+    ```bash
+    sudo sed -i -r -e "s/^(challengeresponseauthentication .*)$/# \1         # commented by $(whoami) on $(date +"%Y-%m-%d @ %H:%M:%S")/I" /etc/ssh/sshd_config
+    echo -e "\nChallengeResponseAuthentication yes         # added by $(whoami) on $(date +"%Y-%m-%d @ %H:%M:%S")" | sudo tee -a /etc/ssh/sshd_config
+    ```
+  </Step>
+
+  <Step title="Restart SSH service">
+    Restart ssh to apply the changes:
+
+    ```bash
+    sudo service sshd restart
+    ```
+
+    <Warning>
+    Keep your current SSH session open while testing! Don't close it until you've verified 2FA is working correctly.
+    </Warning>
+  </Step>
+
+  <Step title="Test 2FA authentication">
+    From a new terminal, try connecting to your server:
+
+    ```bash
+    ssh user@server
+    ```
+
+    If you're using password authentication, you should be prompted for:
+    1. Your password
+    2. Your 6-digit verification code from your authenticator app
+
+    If you're using SSH key authentication, you should be able to login without entering the 2FA code (unless you modify the configuration to require it).
+  </Step>
+</Steps>
+
+## Understanding TOTP
+
+TOTP (Time-based One-Time Password) works by:
+
+1. **Shared Secret**: When you set up 2FA, a secret key is generated and shared between the server and your authenticator app (via QR code)
+2. **Time-based**: The current time is used as an input to generate the code
+3. **Algorithm**: The secret key and current time are used with an algorithm to generate a 6-digit code
+4. **Synchronization**: Both the server and your app use the same algorithm, so they generate the same code at the same time
+5. **Expiration**: Codes expire every 30 seconds, so old codes can't be reused
+
+## Advanced Configuration
+
+### Require 2FA for Key-Based Authentication
+
+If you want to require 2FA even when using SSH keys, add this line to `/etc/ssh/sshd_config`:
+
+```bash
+AuthenticationMethods publickey,keyboard-interactive
+```
+
+This requires both a valid SSH key AND the 2FA code.
+
+### Remove nullok to Make 2FA Mandatory
+
+Once all users have set up 2FA, edit `/etc/pam.d/sshd` and remove `nullok` from the line:
+
+```
+auth       required     pam_google_authenticator.so
+```
+
+Now all users must have 2FA configured to login.
+
+## Troubleshooting
+
+### Lost Access to Authenticator App
+
+Use one of your emergency scratch codes to login. Each code can only be used once.
+
+### Time Synchronization Issues
+
+If codes aren't working, ensure the server time is accurate:
+
+```bash
+timedatectl status
+```
+
+Consider setting up [NTP](/basics/ntp) to keep time synchronized.
+
+### Locked Out
+
+If you're locked out:
+
+1. Use your backup SSH session (you kept it open, right?)
+2. Or use physical/console access to the server
+3. Edit `/etc/pam.d/sshd` and comment out the google-authenticator line
+4. Restart SSH
+
+<Tip>
+Always test 2FA with a new connection while keeping your original session open. This way you can fix any issues if something goes wrong.
+</Tip>
+
+## References
+
+- [google-authenticator-libpam on GitHub](https://github.com/google/google-authenticator-libpam)
+- [Linux PAM Wikipedia](https://en.wikipedia.org/wiki/Linux_PAM)
+- [Time-based One-Time Password (TOTP) Wikipedia](https://en.wikipedia.org/wiki/Time-based_One-time_Password_algorithm)
+- [How TOTP Authenticator Apps Work](https://fastmail.blog/2016/07/22/how-totp-authenticator-apps-work/)
+- [How TOTP-based MFA Works](https://jemurai.com/2018/10/11/how-it-works-totp-based-mfa/)

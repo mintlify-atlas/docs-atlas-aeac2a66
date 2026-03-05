@@ -1,0 +1,137 @@
+---
+title: "Rootkit Detection With chkrootkit"
+description: "Scan for rootkits and security issues using the chkrootkit security scanner"
+---
+
+<Warning>
+This section is a work in progress and may be incomplete. The instructions provided should work, but additional details and explanations may be added in future updates.
+</Warning>
+
+## Why
+
+chkrootkit is another tool for detecting rootkits on Linux systems. It provides an additional layer of security when used alongside other rootkit detectors like rkhunter. Multiple scanning tools can catch threats that others might miss.
+
+## How It Works
+
+chkrootkit checks for signs of rootkits by:
+- Examining system binaries for rootkit signatures
+- Looking for suspicious strings and patterns
+- Checking for hidden processes and files
+- Detecting packet sniffers
+- Identifying commonly infected files
+
+## Goals
+
+- chkrootkit installed and configured to scan daily
+- Automatic email notifications of scan results
+
+## References
+
+- http://www.chkrootkit.org/
+- https://www.cyberciti.biz/faq/howto-check-linux-rootkist-with-detectors-software/
+- https://askubuntu.com/questions/258658/eth0-packet-sniffer-sbin-dhclient
+
+## Installation and Setup
+
+<Steps>
+  <Step title="Install chkrootkit">
+    On Debian based systems:
+
+    ```bash
+    sudo apt install chkrootkit
+    ```
+  </Step>
+
+  <Step title="Perform a manual scan">
+    Run a manual scan to see how chkrootkit works:
+
+    ```bash
+    sudo chkrootkit
+    ```
+
+    Example output:
+    ```
+    ROOTDIR is `/'
+    Checking `amd'...                                           not found
+    Checking `basename'...                                      not infected
+    Checking `biff'...                                          not found
+    Checking `chfn'...                                          not infected
+    Checking `chsh'...                                          not infected
+    ...
+    Checking `scalper'...                                       not infected
+    Checking `slapper'...                                       not infected
+    Checking `z2'...                                            chklastlog: nothing deleted
+    Checking `chkutmp'...                                       chkutmp: nothing deleted
+    Checking `OSX_RSPLUG'...                                    not infected
+    ```
+  </Step>
+
+  <Step title="Backup the configuration file">
+    Make a backup of chkrootkit's configuration:
+
+    ```bash
+    sudo cp --archive /etc/chkrootkit.conf /etc/chkrootkit.conf-COPY-$(date +"%Y%m%d%H%M%S")
+    ```
+  </Step>
+
+  <Step title="Enable daily scans">
+    Configure chkrootkit to run daily and email results.
+
+    On Debian based systems, enable the daily cron job by editing `/etc/chkrootkit.conf` or using:
+
+    ```bash
+    sudo dpkg-reconfigure chkrootkit
+    ```
+
+    Answer `Yes` to the first question to enable daily scans.
+  </Step>
+</Steps>
+
+## Understanding Results
+
+When chkrootkit finds something suspicious, it will report it. Common findings include:
+
+- **not found** - The file or program doesn't exist on your system (normal)
+- **not infected** - The file was checked and appears clean
+- **INFECTED** - Potential rootkit detected (investigate immediately)
+- **nothing deleted** - No suspicious entries found in log files
+
+<Note>
+Some legitimate programs may trigger false positives. For example, DHCP client (`dhclient`) is sometimes flagged as a packet sniffer because it monitors network traffic for DHCP responses. This is normal behavior.
+</Note>
+
+## False Positives
+
+The most common false positive is:
+
+```
+Searching for suspicious files and dirs, it may take a while... 
+eth0: PACKET SNIFFER(/sbin/dhclient)
+```
+
+This warning about `dhclient` being a packet sniffer is generally a false positive, as DHCP clients need to monitor network packets to function properly.
+
+<Tip>
+Always investigate warnings, but understand that not all alerts indicate actual security issues. Research any findings before taking action.
+</Tip>
+
+## Manual Scanning Options
+
+Run chkrootkit with specific checks:
+
+```bash
+# Check specific directories
+sudo chkrootkit -d /path/to/directory
+
+# Quiet mode (only show infected)
+sudo chkrootkit -q
+
+# Run specific tests
+sudo chkrootkit test_name
+```
+
+Check `man chkrootkit` for more options.
+
+## Automated Daily Scans
+
+Once configured, chkrootkit will run automatically via cron and email you the results. Review these emails regularly to catch any potential security issues.

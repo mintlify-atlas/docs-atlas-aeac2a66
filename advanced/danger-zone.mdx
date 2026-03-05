@@ -1,0 +1,345 @@
+---
+title: 'The Danger Zone'
+description: 'High-risk security configurations that could break your system'
+---
+
+<Warning>
+  **Proceed at Your Own Risk**: This section covers configurations that are high risk because there is a possibility they can make your system unusable, or are considered unnecessary by many because the risks outweigh any rewards.
+</Warning>
+
+## Overview
+
+The configurations in this section are considered dangerous for various reasons:
+
+- They can lock you out of your system if misconfigured
+- They may break critical system functionality
+- They require deep system knowledge to troubleshoot
+- Recovery from mistakes can be difficult or impossible without physical access
+
+**Only proceed if you:**
+- Fully understand what each configuration does
+- Have tested in a non-production environment
+- Have a recovery plan (physical access, backup system, etc.)
+- Can afford downtime if something goes wrong
+
+## Covered Topics
+
+This section includes:
+
+<CardGroup cols={2}>
+  <Card title="Kernel sysctl Hardening" icon="shield" href="/advanced/kernel-sysctl">
+    Advanced kernel parameter tuning for security
+  </Card>
+  <Card title="Password Protect GRUB" icon="lock">
+    Prevent unauthorized boot modifications
+  </Card>
+  <Card title="Disable Root Login" icon="user-slash">
+    Lock the root account completely
+  </Card>
+  <Card title="Change Default umask" icon="file-shield">
+    Modify default file permissions
+  </Card>
+</CardGroup>
+
+## Password Protect GRUB
+
+### Why
+
+If a bad actor has physical access to your server, they could use GRUB to gain unauthorized access to your system.
+
+### Why Not
+
+If you forget the password, you'll have to go through [password recovery procedures](https://www.cyberciti.biz/tips/howto-recovering-grub-boot-loader-password.html), which can be complex and time-consuming.
+
+<Warning>
+  This will only protect GRUB and anything behind it like your operating systems. Check your motherboard's documentation for password protecting your BIOS to prevent a bad actor from circumventing GRUB.
+</Warning>
+
+### Configuration Steps
+
+#### 1. Create a Password Hash
+
+Create a [PBKDF2](https://en.wikipedia.org/wiki/PBKDF2) hash of your password:
+
+```bash
+grub-mkpasswd-pbkdf2 -c 100000
+```
+
+You'll be prompted to enter a password:
+
+```
+Enter password:
+Reenter password:
+PBKDF2 hash of your password is grub.pbkdf2.sha512.100000.2812C233D...
+```
+
+#### 2. Create GRUB Password File
+
+Copy everything **after** `PBKDF2 hash of your password is`, starting from and including `grub.pbkdf2.sha512...`
+
+Create the file `/etc/grub.d/01_password`:
+
+```bash
+#!/bin/sh
+set -e
+
+cat << EOF
+set superusers="grub"
+password_pbkdf2 grub grub.pbkdf2.sha512.100000.YOUR_HASH_HERE
+EOF
+```
+
+#### 3. Make the File Executable
+
+```bash
+sudo chmod a+x /etc/grub.d/01_password
+```
+
+#### 4. Backup GRUB Configuration
+
+```bash
+sudo cp --archive /etc/grub.d/10_linux /etc/grub.d/10_linux-COPY-$(date +"%Y%m%d%H%M%S")
+sudo chmod a-x /etc/grub.d/10_linux.*
+```
+
+#### 5. Allow Unrestricted Boot for Default Entry
+
+Modify `/etc/grub.d/10_linux` to allow the default Debian install to boot without a password while keeping everything else restricted:
+
+```bash
+sudo sed -i -r -e "/^CLASS=/ a CLASS=\"\${CLASS} --unrestricted\"" /etc/grub.d/10_linux
+```
+
+#### 6. Update GRUB
+
+```bash
+sudo update-grub
+```
+
+<Note>
+  This configuration auto-boots the default OS without a password but requires a password to access GRUB menu options or boot alternate entries.
+</Note>
+
+## Disable Root Login
+
+### Why
+
+If you have sudo [configured properly](/basics/sudo), then the root account will mostly never need to log in directly.
+
+### Why Not
+
+<Warning>
+  **This can cause issues with some configurations!**
+  
+  If your installation uses `sulogin` (like Debian) to drop to a root console during boot failures, then locking the root account will prevent `sulogin` from opening the root shell.
+</Warning>
+
+You may encounter this error during boot failures:
+
+```
+Cannot open access to console, the root account is locked.
+
+See sulogin(8) man page for more details.
+
+Press Enter to continue.
+```
+
+### Alternatives
+
+1. **Use `--force` option for sulogin**: Some distributions already include this workaround
+2. **Set a complex root password**: Store it in a secured, non-digital format for emergency use
+
+<Info>
+  Some distributions (e.g., Ubuntu) disable root login by default, so you may not need this step.
+</Info>
+
+### How to Disable Root Login
+
+```bash
+sudo passwd -l root
+```
+
+### How to Re-enable Root (if needed)
+
+```bash
+sudo passwd -u root
+```
+
+## Change Default umask
+
+### Why
+
+umask controls the **default** permissions of files and folders when they are created. Insecure default permissions give other accounts potentially unauthorized access to your data.
+
+**Security goals:**
+- For **non-root** accounts: No need for other accounts to have any access by default
+- For **root** account: No need for the primary group or other accounts to have any access by default
+
+### Why Not
+
+<Warning>
+  Changing the default umask can create unexpected problems. For example, if you set umask to `0077` for root, then non-root accounts will not have access to application configuration files in `/etc/`, which could break applications that don't run with root privileges.
+</Warning>
+
+### Understanding umask
+
+umask works by subtracting permissions from the default:
+
+- Default file permissions: `0666` (rw-rw-rw-)
+- Default directory permissions: `0777` (rwxrwxrwx)
+
+**Common umask values:**
+
+| umask | Files Created | Directories Created | Description |
+|-------|---------------|---------------------|-------------|
+| `0022` | `644` (rw-r--r--) | `755` (rwxr-xr-x) | Default on most systems |
+| `0027` | `640` (rw-r-----) | `750` (rwxr-x---) | Recommended for non-root |
+| `0077` | `600` (rw-------) | `700` (rwx------) | Recommended for root |
+
+### Recommended Configuration
+
+#### For Non-Root Users
+
+Add to `/etc/profile` or `~/.bashrc`:
+
+```bash
+# Set umask for non-root users
+if [ $UID -gt 199 ] && [ "`id -gn`" = "`id -un`" ]; then
+    umask 0027
+else
+    umask 0022
+fi
+```
+
+#### For Root User
+
+Add to `/root/.bashrc`:
+
+```bash
+umask 0077
+```
+
+### Testing umask Changes
+
+After changing umask, test file creation:
+
+```bash
+# Create a test file
+touch test_file
+
+# Check permissions
+ls -l test_file
+
+# Clean up
+rm test_file
+```
+
+<Note>
+  Existing files are not affected by umask changes. Only newly created files will use the new default permissions.
+</Note>
+
+## Orphaned Software
+
+### Why Remove Orphaned Packages
+
+Orphaned packages are installed but no longer required by any other packages. They:
+- Consume disk space
+- May contain security vulnerabilities
+- Clutter your system
+- Can cause conflicts
+
+### Finding Orphaned Packages
+
+#### Debian/Ubuntu
+
+```bash
+# List orphaned packages
+sudo apt autoremove --dry-run
+
+# Remove orphaned packages
+sudo apt autoremove
+```
+
+#### Using deborphan
+
+```bash
+# Install deborphan
+sudo apt install deborphan
+
+# List orphaned packages
+sudo deborphan
+
+# Remove orphaned packages
+sudo apt remove --purge $(deborphan)
+```
+
+<Warning>
+  Always review the list of packages before removing them. Some packages marked as orphaned might still be useful to you.
+</Warning>
+
+### Configuration File Cleanup
+
+Remove configuration files from removed packages:
+
+```bash
+# List packages with residual config
+dpkg -l | grep ^rc
+
+# Remove residual configs
+sudo apt purge $(dpkg -l | grep ^rc | awk '{print $2}')
+```
+
+## Recovery Procedures
+
+### If You Lock Yourself Out
+
+1. **Boot into recovery mode** (hold Shift during boot to access GRUB)
+2. **Use a live USB/CD** to chroot into your system
+3. **Contact your hosting provider** if on a VPS/cloud server for console access
+
+### If Root is Locked and Needed
+
+1. Boot into single-user mode
+2. Unlock root account: `passwd -u root`
+3. Fix the issue
+4. Re-lock root account: `passwd -l root`
+
+### If GRUB Password is Lost
+
+1. Boot from live media
+2. Mount your root partition
+3. Remove or edit `/etc/grub.d/01_password`
+4. Regenerate GRUB config: `update-grub`
+5. Create a new password following the steps above
+
+<Warning>
+  Always maintain a separate method of access (console access, live USB, etc.) before implementing these security measures.
+</Warning>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Test First" icon="flask">
+    Always test dangerous configurations in a non-production environment
+  </Card>
+  <Card title="Document Everything" icon="file-lines">
+    Keep detailed notes of all changes and passwords (securely)
+  </Card>
+  <Card title="Have a Recovery Plan" icon="life-ring">
+    Ensure you have alternative access methods before locking down
+  </Card>
+  <Card title="Take Backups" icon="download">
+    Backup critical files and configurations before making changes
+  </Card>
+</CardGroup>
+
+## Additional Resources
+
+- [Debian Security Manual](https://www.debian.org/doc/manuals/securing-debian-manual/)
+- [CIS Benchmarks](https://www.cisecurity.org/cis-benchmarks/)
+- [Red Hat Security Guide](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/)
+- [Ubuntu Security Documentation](https://ubuntu.com/security)
+
+<Info>
+  Remember: Security is about finding the right balance between protection and usability. Don't implement security measures you don't understand or can't support.
+</Info>

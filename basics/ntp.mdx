@@ -1,0 +1,180 @@
+---
+title: NTP Client
+description: Keep your server time synchronized with NTP for security and logging accuracy
+---
+
+## Why This Matters
+
+Many security protocols leverage accurate time. If your system time is incorrect, it could have negative impacts on:
+- Authentication mechanisms
+- Log correlation
+- Certificate validation
+- Scheduled security updates
+
+An NTP client keeps your system time in-sync with global NTP servers.
+
+## How It Works
+
+NTP stands for Network Time Protocol. An NTP client on your server updates the server time with the official time pulled from public NTP servers at https://www.pool.ntp.org/en/
+
+<Warning>
+Starting with **Debian 13 (Trixie)**, the classic `ntp` package has been removed. Running `sudo apt install ntp` will fail with "Package ntp has no installation candidate".
+
+Since this guide only uses NTP as a **client** (to sync the server's clock), the recommended approach on Debian 13+ is to use `systemd-timesyncd`, which is already pre-installed.
+</Warning>
+
+## Configuration
+
+<Tabs>
+  <Tab title="Debian 13+ (systemd-timesyncd)">
+    `systemd-timesyncd` is a lightweight SNTP client already included in Debian. Unlike the full `ntpd` daemon, it does not listen on any port, making it a smaller attack surface.
+
+    <Steps>
+      <Step title="Enable NTP synchronization">
+        ```bash
+        sudo timedatectl set-ntp true
+        ```
+      </Step>
+
+      <Step title="Verify it's working">
+        ```bash
+        timedatectl status
+        ```
+        
+        You should see:
+        - `NTP service: active`
+        - `System clock synchronized: yes`
+      </Step>
+
+      <Step title="Configure NTP servers">
+        Backup the configuration file:
+        
+        ```bash
+        sudo cp --archive /etc/systemd/timesyncd.conf /etc/systemd/timesyncd.conf-COPY-$(date +"%Y%m%d%H%M%S")
+        ```
+        
+        Edit `/etc/systemd/timesyncd.conf` and set the `[Time]` section:
+        
+        ```ini
+        [Time]
+        NTP=pool.ntp.org
+        FallbackNTP=0.debian.pool.ntp.org 1.debian.pool.ntp.org 2.debian.pool.ntp.org
+        ```
+        
+        Or use this command:
+        
+        ```bash
+        sudo sed -i -r -e "s/^#?NTP=.*$/NTP=pool.ntp.org/" /etc/systemd/timesyncd.conf
+        sudo sed -i -r -e "s/^#?FallbackNTP=.*$/FallbackNTP=0.debian.pool.ntp.org 1.debian.pool.ntp.org 2.debian.pool.ntp.org/" /etc/systemd/timesyncd.conf
+        ```
+      </Step>
+
+      <Step title="Restart the service">
+        ```bash
+        sudo systemctl restart systemd-timesyncd
+        ```
+      </Step>
+
+      <Step title="Check synchronization status">
+        ```bash
+        timedatectl timesync-status
+        ```
+        
+        You should see output similar to:
+        
+        ```
+               Server: 108.61.56.35 (pool.ntp.org)
+        Poll interval: 32s (min: 32s; max: 34min 8s)
+                 Leap: normal
+              Version: 4
+              Stratum: 2
+            Reference: C342F10A
+            Precision: 1us (2^0)
+         Root distance: 24.054ms (max: 5s)
+               Offset: +2.156ms
+                Delay: 48.567ms
+               Jitter: 1.452ms
+         Packet count: 3
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Debian 12 and Earlier (ntp)">
+    <Note>
+    These steps apply to **Debian 12 and earlier** only. On Debian 13+, the `ntp` package is no longer available.
+    </Note>
+
+    <Steps>
+      <Step title="Install NTP">
+        ```bash
+        sudo apt install ntp
+        ```
+      </Step>
+
+      <Step title="Backup configuration">
+        ```bash
+        sudo cp --archive /etc/ntp.conf /etc/ntp.conf-COPY-$(date +"%Y%m%d%H%M%S")
+        ```
+      </Step>
+
+      <Step title="Configure NTP pools">
+        The default configuration is already secure. Use the `pool` directive instead of `server` directives.
+        
+        The `pool` directive allows the NTP client to stop using a server if it is unresponsive or serving bad time.
+        
+        Edit `/etc/ntp.conf` and add:
+        
+        ```
+        pool pool.ntp.org iburst
+        ```
+        
+        Or use this command to comment out existing servers and add the pool:
+        
+        ```bash
+        sudo sed -i -r -e "s/^((server|pool).*)/# \1/" /etc/ntp.conf
+        echo -e "\npool pool.ntp.org iburst" | sudo tee -a /etc/ntp.conf
+        ```
+      </Step>
+
+      <Step title="Restart NTP service">
+        ```bash
+        sudo service ntp restart
+        ```
+      </Step>
+
+      <Step title="Check service status">
+        ```bash
+        sudo systemctl status ntp
+        ```
+        
+        You should see the service running and listening.
+      </Step>
+
+      <Step title="Check NTP status">
+        ```bash
+        sudo ntpq -p
+        ```
+        
+        You should see output showing connected NTP servers:
+        
+        ```
+             remote           refid      st t when poll reach   delay   offset  jitter
+        ==============================================================================
+         pool.ntp.org    .POOL.          16 p    -   64    0    0.000    0.000   0.000
+        *lithium.constan 198.30.92.2      2 u    -   64    1   19.900    4.894   3.951
+         ntp2.wiktel.com 212.215.1.157    2 u    2   64    1   48.061   -0.431   0.104
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## What This Does
+
+With NTP configured:
+- Your system clock stays accurate
+- Security protocols that depend on time work correctly
+- Logs have accurate timestamps for forensics
+- Certificates are validated with correct time
+- Scheduled tasks run at the right times

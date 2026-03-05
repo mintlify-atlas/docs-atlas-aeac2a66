@@ -1,0 +1,56 @@
+---
+title: "Picking A Linux Distribution"
+description: "Choose the right Linux distribution for your secure server deployment"
+---
+
+This guide is intended to be distribution agnostic so users can use [any distribution](https://distrowatch.com/) they want. With that said, there are a few important things to keep in mind when selecting your distribution.
+
+## Distribution Requirements
+
+You want a distribution that meets these criteria:
+
+### Stability
+
+<Card title="Stable and Reliable" icon="shield-check">
+Unless you like debugging issues at 2 AM, you don't want an unattended upgrade, or a manual package/system update, to render your server inoperable. But this also means you're okay with not running the latest, greatest, bleeding edge software.
+</Card>
+
+**Why it matters:** Server stability is crucial for security. A stable distribution means fewer unexpected issues and better predictability.
+
+### Security Patches
+
+<Card title="Up-to-Date Security Patches" icon="shield-halved">
+You can secure everything on your server, but if the core OS or applications you're running have known vulnerabilities, you'll never be safe.
+</Card>
+
+**Why it matters:** Regular security updates are essential. Choose a distribution with a track record of timely security patches.
+
+### Familiarity
+
+<Card title="Familiarity with the System" icon="graduation-cap">
+If you don't know Linux, I would advise you play around with one before you try to secure it. You should be comfortable with it and know your way around, like how to install software, where configuration files are, etc.
+</Card>
+
+**Why it matters:** You'll be more effective at securing a system you understand well.
+
+### Support
+
+<Card title="Well-Supported Community" icon="users">
+Even the most seasoned admin needs help every now and then. Having a place to go for help will save your sanity.
+</Card>
+
+**Why it matters:** Good documentation and an active community can be invaluable when troubleshooting issues.
+
+## Popular Server Distributions
+
+<Note>
+This guide is primarily tested on Debian, but the concepts apply to most Linux distributions. Commands may vary slightly between distributions, particularly package management commands.
+</Note>
+
+Some popular choices for secure servers include:
+
+- **Debian** - Known for stability and security
+- **Ubuntu Server** - Based on Debian with commercial support options
+- **Red Hat Enterprise Linux (RHEL)** - Enterprise-focused with long-term support
+- **Rocky Linux / AlmaLinux** - Community-driven RHEL alternatives
+- **openSUSE** - Strong security features and YaST configuration tool

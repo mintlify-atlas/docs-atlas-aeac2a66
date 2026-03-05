@@ -1,0 +1,151 @@
+---
+title: Application Intrusion Detection And Prevention With CrowdSec
+description: Monitor application logs with community-powered threat intelligence to detect and prevent intrusions
+---
+
+## Why Use CrowdSec
+
+UFW tells your server what doors to board up so nobody can see them, and what doors to allow authorized users through. PSAD monitors network activity to detect and prevent potential intrusions -- repeated attempts to get in.
+
+CrowdSec is similar to Fail2Ban in that it monitors the logs of your applications (like SSH and Apache) to detect and prevent potential intrusions. However, CrowdSec is coupled with a community that shares threat intelligence back to CrowdSec to then distribute a Community Blocklist to all users.
+
+## How It Works
+
+CrowdSec monitors the logs of your applications (like SSH and Apache) to detect and prevent potential intrusions. It will monitor network traffic/logs and prevent intrusions by blocking suspicious activity (e.g. multiple successive failed connections in a short time-span). 
+
+Once a malicious IP is detected, it will be added to your local decision list and threat information is shared with CrowdSec to update the Community Blocklist on malicious IP addresses. Once an IP address hits a certain threshold of malicious activity, it will be automatically propagated to all other CrowdSec users to proactively block.
+
+<Note>
+- As of right now, the only thing running on this server is SSH so we'll want CrowdSec to monitor SSH and ban as necessary.
+- As you install other programs, you'll need to install additional collections and configure the appropriate acquisitions.
+</Note>
+
+<Info>
+Learn more:
+- [How CrowdSec curates the Community Blocklist](https://www.crowdsec.net/our-data)
+- [What threat intelligence is shared with CrowdSec](https://docs.crowdsec.net/docs/next/central_api/intro#signal-meta-data)
+</Info>
+
+## Installation and Configuration
+
+<Steps>
+
+<Step title="Install CrowdSec Security Engine">
+
+On any Linux distro (including Debian based systems):
+
+First, install the CrowdSec repository:
+
+```bash
+curl -s https://install.crowdsec.net | sudo sh
+```
+
+<Tip>
+If `curl | sh` is not your thing, you can find [additional install methods here](https://docs.crowdsec.net/u/getting_started/installation/linux).
+</Tip>
+
+Then install the CrowdSec Security Engine:
+
+```bash
+sudo apt install crowdsec
+```
+
+<Info>
+By default, while CrowdSec is installing the Security Engine, it will auto-discover your installed applications and install the appropriate parsers and scenarios for them. Since we know most Linux servers are running SSH out of the box, CrowdSec will automatically configure this for you.
+</Info>
+
+</Step>
+
+<Step title="Install Remediation Component">
+
+CrowdSec by itself is a detection engine. Since in most modern infrastructures you may have an upstream firewall or WAF, CrowdSec will not block the IP addresses by itself. You need to install a Remediation Component to block the IP addresses detected by CrowdSec.
+
+```bash
+sudo apt install crowdsec-firewall-bouncer-iptables
+```
+
+<Tip>
+If your installation of UFW is not using `iptables` as the backend, you can alternatively install `crowdsec-firewall-bouncer-nftables`. There is no difference in the installed binaries, only the configuration file is different.
+</Tip>
+
+<Info>
+By default, while the Remediation Component is installing, it will auto-configure the necessary settings to work with the Security Engine if deployed on the same host (and if the security engine is not within a container environment).
+</Info>
+
+</Step>
+
+<Step title="Verify Installation">
+
+CrowdSec includes a CLI tool to check the status of the Security Engine and the Remediation Component.
+
+```bash
+sudo cscli metrics
+```
+
+Example output:
+
+```
+Acquisition Metrics:
+╭────────────────────────┬────────────┬──────────────┬────────────────┬────────────────────────┬───────────────────╮
+│ Source                 │ Lines read │ Lines parsed │ Lines unparsed │ Lines poured to bucket │ Lines whitelisted │
+├────────────────────────┼────────────┼──────────────┼────────────────┼────────────────────────┼───────────────────┤
+│ file:/var/log/auth.log │ 5          │ 4            │ 1              │ 10                     │ -                 │
+│ file:/var/log/syslog   │ 30         │ -            │ 30             │ -                      │ -                 │
+╰────────────────────────┴────────────┴──────────────┴────────────────┴────────────────────────┴───────────────────╯
+
+Local API Decisions:
+╭────────────────────────────────────────────┬────────┬────────┬───────╮
+│ Reason                                     │ Origin │ Action │ Count │
+├────────────────────────────────────────────┼────────┼────────┼───────┤
+│ crowdsecurity/http-backdoors-attempts      │ CAPI   │ ban    │ 73    │
+│ crowdsecurity/http-bad-user-agent          │ CAPI   │ ban    │ 4836  │
+│ crowdsecurity/ssh-slow-bf                  │ CAPI   │ ban    │ 3412  │
+│ crowdsecurity/ssh-bf                       │ CAPI   │ ban    │ 2000  │
+╰────────────────────────────────────────────┴────────┴────────┴───────╯
+```
+
+### Understanding the Metrics
+
+The output provides several sections:
+
+- **Acquisition Metrics**: Shows the logs that the Security Engine is reading and parsing. If you see logs in the `Lines unparsed` column, it means the Security Engine is not able to parse the logs. This could be due to a misconfiguration or the logs are not in the expected format.
+
+- **Local API Decisions**: Shows the decisions that the Security Engine has within the database. If you see entries in the `Count` column, it means the Security Engine has detected malicious activity and has blocked the IP address.
+  - **Origin**: Where the decision came from. `CAPI` means it's from the Central API (Community Blocklist).
+
+- **Local API Metrics**: Shows the number of hits to the Local API. This is the API that the Security Engine uses to communicate with the Remediation Component.
+
+- **Local API Bouncers Metrics**: Shows the number of hits to the Local API by the Remediation Component.
+
+- **Local API Machines Metrics**: Shows the number of hits to the Local API by the Security Engine (if you run multiple Security Engines in a centralized setup, you can see multiple IDs here).
+
+- **Parser Metrics**: Shows the parsers that are being used by the Security Engine. If you see logs in the `Unparsed` column, it means the Security Engine is not able to parse the logs.
+
+- **Scenario Metrics**: Shows the scenarios that are being used by the Security Engine. If you see logs in the `Current Count` column, it means the Security Engine has detected malicious activity and is tracking the IP address.
+
+</Step>
+
+</Steps>
+
+## Unban an IP Address
+
+To unban an IP address, use this command:
+
+```bash
+cscli decisions delete --ip [IP]
+```
+
+Where `[IP]` is the IP address you want to unban.
+
+For example, to unban `192.168.1.100` from SSH:
+
+```bash
+cscli decisions delete --ip 192.168.1.100
+```
+
+## Reference
+
+- [CrowdSec Official Website](https://www.crowdsec.net/)
+- [CrowdSec Documentation](https://docs.crowdsec.net/)
+- [CrowdSec Community Blocklist](https://www.crowdsec.net/our-data)
+- [CrowdSec GitHub](https://github.com/crowdsecurity/crowdsec)

@@ -1,0 +1,181 @@
+---
+title: "logwatch - System Log Analyzer and Reporter"
+description: "Receive daily email summaries of your server's logs and system status with logwatch"
+---
+
+## Why
+
+Your server generates numerous logs that contain important security and operational information. Unless you plan on checking your server logs daily, you need an automated way to receive email summaries. logwatch scans system log files and provides easy-to-read summaries.
+
+## How It Works
+
+logwatch scans system log files and summarizes them into readable reports. It uses service files (located in `/usr/share/logwatch/scripts/services`) to understand how to parse different log types.
+
+The configuration file `/usr/share/logwatch/default.conf/logwatch.conf` specifies default options that can be overridden via command line arguments.
+
+## Goals
+
+- logwatch configured to send daily email summaries of server status and logs
+- Comprehensive coverage of all important system services and events
+
+## Notes
+
+- Your server must be able to send emails for this to work
+- The steps below configure daily reports. To change the schedule, modify the cron job and adjust the `range` option accordingly
+- If you followed the Gmail/Exim4 setup earlier, the long line issue mentioned in some guides has already been addressed
+
+## References
+
+- https://sourceforge.net/projects/logwatch/
+- https://www.digitalocean.com/community/tutorials/how-to-install-and-use-logwatch-log-analyzer-and-reporter-on-a-vps
+- https://blog.dhampir.no/content/exim4-line-length-in-debian-stretch-mail-delivery-failed-returning-message-to-sender
+
+## Installation and Setup
+
+<Steps>
+  <Step title="Install logwatch">
+    On Debian based systems:
+
+    ```bash
+    sudo apt install logwatch
+    ```
+  </Step>
+
+  <Step title="Test logwatch output">
+    Run logwatch manually to see what it collects:
+
+    ```bash
+    sudo /usr/sbin/logwatch --output stdout --format text --range yesterday --service all
+    ```
+
+    Example output:
+    ```
+     ################### Logwatch 7.4.3 (12/07/16) ####################
+            Processing Initiated: Mon Mar  4 00:05:50 2019
+            Date Range Processed: yesterday
+                                  ( 2019-Mar-03 )
+                                  Period is day.
+            Detail Level of Output: 5
+            Type of Output/Format: stdout / text
+            Logfiles for Host: host
+     ##################################################################
+
+     --------------------- Cron Begin ------------------------
+    ...
+    ...
+     ---------------------- Disk Space End -------------------------
+
+
+     ###################### Logwatch End #########################
+    ```
+  </Step>
+
+  <Step title="Review configuration file">
+    Review logwatch's configuration file to understand the available options:
+
+    ```bash
+    less /usr/share/logwatch/default.conf/logwatch.conf
+    ```
+
+    Pay attention to these key settings:
+    - `Output` - Where to send the report (stdout, mail, file)
+    - `Format` - Output format (text or html)
+    - `MailTo` - Email recipient
+    - `Range` - Time range to analyze (yesterday, today, all)
+    - `Service` - Which services to report on
+
+    <Info>
+    Instead of modifying the configuration file, we'll pass options as command line arguments in the cron job. This ensures your settings persist even if the config file is updated.
+    </Info>
+  </Step>
+
+  <Step title="Backup the cron job">
+    Make a backup of logwatch's daily cron file:
+
+    ```bash
+    sudo cp --archive /etc/cron.daily/00logwatch /etc/cron.daily/00logwatch-COPY-$(date +"%Y%m%d%H%M%S")
+    sudo chmod -x /etc/cron.daily/00logwatch-COPY*
+    ```
+  </Step>
+
+  <Step title="Configure email output">
+    Modify `/etc/cron.daily/00logwatch` to send HTML emails instead of stdout output.
+
+    Find the execute line and change it to:
+
+    ```bash
+    /usr/sbin/logwatch --output mail --format html --mailto root --range yesterday --service all
+    ```
+
+    The complete file should look like:
+    ```bash
+    #!/bin/bash
+
+    #Check if removed-but-not-purged
+    test -x /usr/share/logwatch/scripts/logwatch.pl || exit 0
+
+    #execute
+    /usr/sbin/logwatch --output mail --format html --mailto root --range yesterday --service all
+
+    #Note: It's possible to force the recipient in above command
+    #Just pass --mailto address@a.com instead of --output mail
+    ```
+  </Step>
+
+  <Step title="Test the cron job">
+    Execute the cron job manually to verify it works:
+
+    ```bash
+    sudo /etc/cron.daily/00logwatch
+    ```
+
+    You should receive an email with yesterday's log summary.
+  </Step>
+</Steps>
+
+## Command Line Options
+
+Useful logwatch options for manual runs:
+
+| Option | Description |
+|--------|-------------|
+| `--output stdout` | Display on screen |
+| `--output mail` | Send via email |
+| `--format text` | Plain text format |
+| `--format html` | HTML format |
+| `--mailto user@example.com` | Recipient email |
+| `--range yesterday` | Yesterday's logs |
+| `--range today` | Today's logs |
+| `--range all` | All available logs |
+| `--service all` | All services |
+| `--service sshd` | Only SSH logs |
+
+## Customizing Reports
+
+You can customize which services logwatch monitors:
+
+```bash
+# Monitor only specific services
+sudo /usr/sbin/logwatch --service sshd --service fail2ban --range yesterday
+
+# Weekly reports (adjust cron and use --range option)
+sudo /usr/sbin/logwatch --range "between -7 days and today"
+```
+
+<Tip>
+logwatch supports many services out of the box. Check `/usr/share/logwatch/scripts/services` for available service monitors.
+</Tip>
+
+## Daily Automated Reports
+
+Once configured, logwatch will run daily via cron and email you comprehensive log summaries. These reports help you:
+
+- Monitor system health and performance
+- Detect security issues and intrusion attempts
+- Track service status and errors
+- Review disk space and resource usage
+- Identify unusual system activity
+
+<Warning>
+If logwatch fails to deliver email due to long lines in the message, refer to the Gmail/Exim4 setup guide to enable the `IGNORE_SMTP_LINE_LENGTH_LIMIT` option.
+</Warning>

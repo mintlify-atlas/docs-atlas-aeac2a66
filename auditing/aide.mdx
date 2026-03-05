@@ -1,0 +1,125 @@
+---
+title: "File/Folder Integrity Monitoring With AIDE"
+description: "Monitor and detect unauthorized changes to files and folders using Advanced Intrusion Detection Environment (AIDE)"
+---
+
+<Warning>
+This section is a work in progress and may be incomplete. The instructions provided should work, but additional details and explanations may be added in future updates.
+</Warning>
+
+## Why
+
+You want to know when files/folders change on your server. Unauthorized changes could indicate a security breach or compromise. AIDE (Advanced Intrusion Detection Environment) monitors file system changes and alerts you to modifications.
+
+## How It Works
+
+AIDE creates a database of file checksums, permissions, and attributes. It then periodically scans the system and compares against this database to detect any changes. When differences are found, it reports what has been added, removed, or modified.
+
+## Goals
+
+- AIDE installed and configured to monitor critical system files and folders
+- Daily automated scans with email alerts for any detected changes
+
+## Notes
+
+- After you make legitimate changes to monitored files/folders, you'll need to update the AIDE database
+- The initial database creation can take some time depending on what you're monitoring
+- You'll want to customize which files/folders AIDE monitors based on your needs
+
+## References
+
+- https://aide.github.io/
+- https://www.cyberciti.biz/faq/debian-ubuntu-linux-software-integrity-checking-with-aide/
+- https://kifarunix.com/how-to-install-and-configure-aide-on-debian-10-buster/
+- https://wiki.archlinux.org/index.php/AIDE
+- `man aide`
+
+## Installation and Setup
+
+<Steps>
+  <Step title="Install AIDE">
+    On Debian based systems:
+
+    ```bash
+    sudo apt install aide aide-common
+    ```
+  </Step>
+
+  <Step title="Configure AIDE">
+    Make a backup of AIDE's configuration file `/etc/aide/aide.conf`:
+
+    ```bash
+    sudo cp --archive /etc/aide/aide.conf /etc/aide/aide.conf-COPY-$(date +"%Y%m%d%H%M%S")
+    ```
+
+    The default configuration file `/etc/aide/aide.conf` is well commented and you should take a look at it and customize based on your requirements. The default settings monitor many important system directories.
+
+    <Info>
+    Pay special attention to the paths that AIDE monitors. Add or remove paths based on your specific needs and server configuration.
+    </Info>
+  </Step>
+
+  <Step title="Configure automatic execution">
+    Configure AIDE to run daily by modifying `/etc/default/aide`:
+
+    ```bash
+    sudo cp --archive /etc/default/aide /etc/default/aide-COPY-$(date +"%Y%m%d%H%M%S")
+    ```
+
+    Set these options in `/etc/default/aide`:
+
+    | Setting | Value | Description |
+    |---------|-------|-------------|
+    | `CRON_DAILY_RUN` | `yes` | Enable daily cron job |
+    | `MAILTO` | `root` | Send reports to root |
+    | `QUIETREPORTS` | `no` | Include full reports in emails |
+  </Step>
+
+  <Step title="Initialize the AIDE database">
+    Create the initial AIDE database:
+
+    ```bash
+    sudo aideinit
+    ```
+
+    This will scan your system and create the database. It may take several minutes.
+
+    <Note>
+    On Debian systems, `aideinit` creates the database at `/var/lib/aide/aide.db.new`. After confirming it's correct, it moves it to `/var/lib/aide/aide.db`.
+    </Note>
+  </Step>
+
+  <Step title="Test AIDE">
+    Test that everything works by making some changes:
+
+    ```bash
+    sudo touch /etc/test.sh
+    sudo touch /root/test.sh
+    
+    sudo aide.wrapper --check
+    
+    sudo rm /etc/test.sh
+    sudo rm /root/test.sh
+    
+    sudo aideinit -y -f
+    ```
+
+    You should see output showing that AIDE detected the added files.
+  </Step>
+</Steps>
+
+## Updating The Database
+
+Every time you make legitimate changes to files/folders that AIDE monitors, you'll need to update the database to capture those changes:
+
+```bash
+sudo aideinit -y -f
+```
+
+## Daily Automated Scans
+
+If you set `CRON_DAILY_RUN` to `yes` in `/etc/default/aide`, then cron will execute `/etc/cron.daily/aide` every day and email you the output with any detected changes.
+
+<Tip>
+Review AIDE reports regularly. Unexpected changes could indicate a security issue that needs investigation.
+</Tip>

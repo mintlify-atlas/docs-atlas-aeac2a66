@@ -1,0 +1,229 @@
+---
+title: "Lynis - Linux Security Auditing"
+description: "Perform comprehensive security audits of your Linux server with Lynis security scanner"
+---
+
+## Why
+
+From [https://cisofy.com/lynis/](https://cisofy.com/lynis/):
+
+> Lynis is a battle-tested security tool for systems running Linux, macOS, or Unix-based operating system. It performs an extensive health scan of your systems to support system hardening and compliance testing.
+
+Lynis provides an automated, comprehensive security audit that helps identify vulnerabilities, misconfigurations, and areas for improvement in your server's security posture.
+
+## Goals
+
+- Lynis installed and ready to perform security audits
+- Regular security scans to identify and address vulnerabilities
+
+## Notes
+
+- CISOFY provides packages for many distributions
+- Check https://packages.cisofy.com/ for distribution-specific installation instructions
+- Lynis is actively maintained and regularly updated
+
+## References
+
+- https://cisofy.com/documentation/lynis/get-started/
+- https://packages.cisofy.com/community/#debian-ubuntu
+- https://thelinuxcode.com/audit-lynis-ubuntu-server/
+- https://www.vultr.com/docs/install-lynis-on-debian-8
+
+## Installation and Setup
+
+<Steps>
+  <Step title="Install prerequisites">
+    On Debian based systems, install required packages:
+
+    ```bash
+    sudo apt install ca-certificates apt-transport-https
+    ```
+  </Step>
+
+  <Step title="Add CISOFY repository">
+    Add CISOFY's community software repository:
+
+    ```bash
+    sudo apt install ca-certificates host
+    sudo mkdir -p /etc/apt/keyrings
+    wget -O - https://packages.cisofy.com/keys/cisofy-software-public.key | sudo gpg --dearmor -o /etc/apt/keyrings/cisofy-lynis.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/cisofy-lynis.gpg] https://packages.cisofy.com/community/lynis/deb/ stable main" | sudo tee /etc/apt/sources.list.d/cisofy-lynis.list
+    ```
+  </Step>
+
+  <Step title="Install Lynis">
+    Update package lists and install Lynis:
+
+    ```bash
+    sudo apt update
+    sudo apt install lynis
+    ```
+  </Step>
+
+  <Step title="Update Lynis">
+    Check for and apply any updates:
+
+    ```bash
+    sudo lynis update info
+    ```
+  </Step>
+</Steps>
+
+## Running a Security Audit
+
+To perform a comprehensive security audit of your system:
+
+```bash
+sudo lynis audit system
+```
+
+This will:
+1. Scan your entire system
+2. Check for security issues and vulnerabilities
+3. Report findings with severity ratings
+4. Provide suggestions for improvement
+
+<Info>
+The audit is read-only and does not make any changes to your system. It's safe to run at any time.
+</Info>
+
+## Understanding the Output
+
+Lynis provides detailed output organized into sections:
+
+### Status Indicators
+
+- **[OK]** - Check passed, no issues found
+- **[WARNING]** - Potential issue that should be reviewed
+- **[SUGGESTION]** - Recommendation for improvement
+- **[FOUND]** - Item was detected
+- **[NOT FOUND]** - Item was not detected
+
+### Sections Audited
+
+Lynis checks numerous areas including:
+
+- System tools and commands
+- Boot and services
+- Kernel configuration
+- File system integrity
+- Users and authentication
+- File permissions
+- SSH configuration
+- Network configuration
+- Firewall settings
+- Software packages
+- Logging and auditing
+
+### Hardening Index
+
+At the end of the scan, Lynis provides a hardening index score (0-100) indicating your system's overall security posture.
+
+## Reviewing Results
+
+<Steps>
+  <Step title="Review warnings">
+    Pay special attention to items marked as **WARNING**. These often indicate security issues that should be addressed.
+  </Step>
+
+  <Step title="Review suggestions">
+    Examine the **SUGGESTION** items. These are recommendations that can improve your security posture.
+  </Step>
+
+  <Step title="Check the log file">
+    Detailed results are saved to `/var/log/lynis.log`:
+
+    ```bash
+    sudo less /var/log/lynis.log
+    ```
+  </Step>
+
+  <Step title="Review the report">
+    A summary report is also saved to `/var/log/lynis-report.dat`:
+
+    ```bash
+    sudo less /var/log/lynis-report.dat
+    ```
+  </Step>
+</Steps>
+
+## Common Findings and Actions
+
+After running Lynis, you'll likely see suggestions such as:
+
+- **Install additional security tools** (like fail2ban, rkhunter)
+- **Harden SSH configuration** (disable root login, change port)
+- **Configure a firewall** (UFW, iptables)
+- **Enable automatic security updates**
+- **Set up file integrity monitoring** (AIDE)
+- **Configure audit logging** (auditd)
+- **Review user accounts and permissions**
+
+<Tip>
+Many of the items Lynis suggests are covered in other sections of this guide. Use Lynis results to verify you've implemented the security measures appropriately.
+</Tip>
+
+## Additional Lynis Commands
+
+```bash
+# Show Lynis version
+lynis show version
+
+# Show available commands
+lynis show commands
+
+# Show available options
+lynis show options
+
+# Update Lynis
+sudo lynis update info
+
+# Run specific test group
+sudo lynis audit system --tests-from-group malware
+
+# Run with specific profile
+sudo lynis audit system --profile /path/to/profile
+```
+
+## Automated Audits
+
+You can set up Lynis to run automatically:
+
+```bash
+# Create a cron job for weekly audits
+sudo crontab -e
+```
+
+Add:
+```
+0 3 * * 0 /usr/bin/lynis audit system --cronjob | mail -s "Lynis Weekly Report" root
+```
+
+This runs Lynis every Sunday at 3 AM and emails the results to root.
+
+## Customizing Scans
+
+Create a custom profile in `/etc/lynis/custom.prf`:
+
+```bash
+# Skip specific tests
+skip-test=FILE-1234
+skip-test=AUTH-5678
+
+# Set custom values
+config:ssh_daemon_port:2222
+```
+
+## Next Steps
+
+After running Lynis:
+
+1. **Document the findings** - Keep a record of your security audit results
+2. **Prioritize issues** - Address critical warnings first
+3. **Implement suggestions** - Work through recommendations systematically  
+4. **Re-run audits** - After making changes, run Lynis again to verify improvements
+5. **Schedule regular audits** - Make security audits part of your routine maintenance
+
+<Warning>
+Do not blindly implement all suggestions. Understand each recommendation and how it applies to your specific environment and use case before making changes.
+</Warning>

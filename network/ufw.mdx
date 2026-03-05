@@ -1,0 +1,274 @@
+---
+title: Firewall With UFW (Uncomplicated Firewall)
+description: Configure UFW to control network traffic and secure your Linux server
+---
+
+## Why Use UFW
+
+Call me paranoid, and you don't have to agree, but I want to deny all traffic in and out of my server except what I explicitly allow. Why would my server be sending traffic out that I don't know about? And why would external traffic be trying to access my server if I don't know who or what it is? When it comes to good security, my opinion is to reject/deny by default, and allow by exception.
+
+Of course, if you disagree, that is totally fine and can configure UFW to suit your needs.
+
+Either way, ensuring that only traffic we explicitly allow is the job of a firewall.
+
+## How It Works
+
+The Linux kernel provides capabilities to monitor and control network traffic. These capabilities are exposed to the end-user through firewall utilities. On Linux, the most common firewall is [iptables](https://en.wikipedia.org/wiki/Iptables). However, iptables is rather complicated and confusing (IMHO). This is where UFW comes in. Think of UFW as a front-end to iptables. It simplifies the process of managing the iptables rules that tell the Linux kernel what to do with network traffic.
+
+**UFW** works by letting you configure rules that:
+
+- **allow** or **deny**
+- **input** or **output** traffic
+- **to** or **from** ports
+
+You can create rules by explicitly specifying the ports or with application configurations that specify the ports.
+
+<Note>
+As you install other programs, you'll need to enable the necessary ports/applications.
+</Note>
+
+## Installation and Configuration
+
+<Steps>
+
+<Step title="Install UFW">
+
+On Debian based systems:
+
+```bash
+sudo apt install ufw
+```
+
+</Step>
+
+<Step title="Configure Default Outgoing Traffic">
+
+Deny all outgoing traffic:
+
+```bash
+sudo ufw default deny outgoing comment 'deny all outgoing traffic'
+```
+
+You should see:
+
+```
+Default outgoing policy changed to 'deny'
+(be sure to update your rules accordingly)
+```
+
+<Info>
+If you are not as paranoid and don't want to deny all outgoing traffic, you can allow it instead:
+
+```bash
+sudo ufw default allow outgoing comment 'allow all outgoing traffic'
+```
+</Info>
+
+</Step>
+
+<Step title="Deny All Incoming Traffic">
+
+```bash
+sudo ufw default deny incoming comment 'deny all incoming traffic'
+```
+
+</Step>
+
+<Step title="Allow SSH Connections">
+
+<Warning>
+Obviously we want SSH connections in. Using `limit` instead of `allow` will automatically deny connections from an IP address if it attempts to initiate 6 or more connections within a 30-second window.
+</Warning>
+
+```bash
+sudo ufw limit in ssh comment 'allow SSH connections in'
+```
+
+You should see:
+
+```
+Rules updated
+Rules updated (v6)
+```
+
+</Step>
+
+<Step title="Allow Additional Traffic">
+
+Allow additional traffic as per your needs. Some common use-cases:
+
+```bash
+# allow traffic out to port 53 -- DNS
+sudo ufw allow out 53 comment 'allow DNS calls out'
+
+# allow traffic out to port 123 -- NTP
+sudo ufw allow out 123 comment 'allow NTP out'
+
+# allow traffic out for HTTP, HTTPS, or FTP
+# apt might needs these depending on which sources you're using
+sudo ufw allow out http comment 'allow HTTP traffic out'
+sudo ufw allow out https comment 'allow HTTPS traffic out'
+sudo ufw allow out ftp comment 'allow FTP traffic out'
+
+# allow whois
+sudo ufw allow out whois comment 'allow whois'
+
+# allow mails for status notifications -- choose port according to your provider
+sudo ufw allow out 25 comment 'allow SMTP out'
+sudo ufw allow out 587 comment 'allow SMTP out'
+
+# allow traffic out to port 68 -- the DHCP client
+# you only need this if you're using DHCP
+sudo ufw allow out 67 comment 'allow the DHCP client to update'
+sudo ufw allow out 68 comment 'allow the DHCP client to update'
+```
+
+<Note>
+You'll need to allow HTTP/HTTPS for installing packages and many other things.
+</Note>
+
+</Step>
+
+<Step title="Enable UFW">
+
+```bash
+sudo ufw enable
+```
+
+You should see:
+
+```
+Command may disrupt existing ssh connections. Proceed with operation (y|n)? y
+Firewall is active and enabled on system startup
+```
+
+</Step>
+
+<Step title="Check UFW Status">
+
+To see a basic status:
+
+```bash
+sudo ufw status
+```
+
+For more detailed information:
+
+```bash
+sudo ufw status verbose
+```
+
+Example output:
+
+```
+Status: active
+Logging: on (low)
+Default: deny (incoming), deny (outgoing), disabled (routed)
+New profiles: skip
+
+To                         Action      From
+--                         ------      ----
+22/tcp                     LIMIT IN    Anywhere                   # allow SSH connections in
+22/tcp (v6)                LIMIT IN    Anywhere (v6)              # allow SSH connections in
+
+53                         ALLOW OUT   Anywhere                   # allow DNS calls out
+123                        ALLOW OUT   Anywhere                   # allow NTP out
+80/tcp                     ALLOW OUT   Anywhere                   # allow HTTP traffic out
+443/tcp                    ALLOW OUT   Anywhere                   # allow HTTPS traffic out
+```
+
+</Step>
+
+</Steps>
+
+## Managing Rules
+
+### Deleting a Rule
+
+If you need to delete a rule:
+
+```bash
+sudo ufw status numbered
+# [view the numbered list]
+sudo ufw delete 3  # line number of the rule you want to delete
+```
+
+## Default Applications
+
+UFW ships with some default applications. You can see them with:
+
+```bash
+sudo ufw app list
+```
+
+Example output:
+
+```
+Available applications:
+  AIM
+  Bonjour
+  CIFS
+  DNS
+  Deluge
+  IMAP
+  IMAPS
+  IPP
+  OpenSSH
+  POP3
+  POP3S
+  SMTP
+  SSH
+  WWW
+  WWW Full
+  WWW Secure
+```
+
+To get details about an app:
+
+```bash
+sudo ufw app info [app name]
+```
+
+Example:
+
+```bash
+sudo ufw app info DNS
+```
+
+Output:
+
+```
+Profile: DNS
+Title: Internet Domain Name Server
+Description: Internet Domain Name Server
+
+Port:
+  53
+```
+
+## Custom Application Profiles
+
+If you don't want to create rules by explicitly providing the port number(s), you can create your own application configurations. To do this, create a file in `/etc/ufw/applications.d`.
+
+For example, here is what you would use for [Plex](https://support.plex.tv/articles/201543147-what-network-ports-do-i-need-to-allow-through-my-firewall/):
+
+```bash
+cat /etc/ufw/applications.d/plexmediaserver
+```
+
+```ini
+[PlexMediaServer]
+title=Plex Media Server
+description=This opens up PlexMediaServer for http (32400), upnp, and autodiscovery.
+ports=32469/tcp|32413/udp|1900/udp|32400/tcp|32412/udp|32410/udp|32414/udp|32400/udp
+```
+
+Then you can enable it like any other app:
+
+```bash
+sudo ufw allow plexmediaserver
+```
+
+## Reference
+
+- [UFW Documentation](https://launchpad.net/ufw)

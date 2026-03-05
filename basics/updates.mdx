@@ -1,0 +1,275 @@
+---
+title: Automatic Security Updates and Alerts
+description: Configure unattended security updates and email notifications for your server
+---
+
+## Why This Matters
+
+It is critical to keep a server updated with the latest security patches. Without timely updates, your server remains vulnerable to known security exploits that attackers actively scan for and exploit.
+
+Unless you plan on checking your server daily, you need:
+1. **Automatic updates** for critical security patches
+2. **Email alerts** for pending non-critical updates
+
+You don't want to automatically apply ALL updates because:
+- Every update carries some risk of breaking functionality
+- Critical security patches should be applied immediately
+- Non-critical updates can wait for manual review
+
+<Warning>
+**Potential Risk**: Automatic unattended updates may break your system, and you may not be near your server to fix it. This is especially problematic if SSH access breaks.
+
+Weigh this risk against the security risk of running unpatched systems.
+</Warning>
+
+## Debian Based Systems
+
+<Note>
+Your server must be able to send emails for notifications to work. See the Gmail/Exim4 configuration guide if you haven't set up email yet.
+</Note>
+
+### How It Works
+
+On Debian systems, we'll use:
+
+- **unattended-upgrades** - Automatically applies system updates you specify (critical security patches)
+- **apt-listchanges** - Shows details about package changes before installation
+- **apticron** - Sends email notifications for pending package updates
+
+### Installation
+
+<Steps>
+  <Step title="Install required packages">
+    ```bash
+    sudo apt install unattended-upgrades apt-listchanges apticron
+    ```
+  </Step>
+
+  <Step title="Configure unattended-upgrades">
+    Instead of modifying the default configuration files (which may be overwritten during updates), create a new file:
+    
+    Create `/etc/apt/apt.conf.d/51myunattended-upgrades` with this content:
+    
+    ```
+    // Enable the update/upgrade script (0=disable)
+    APT::Periodic::Enable "1";
+
+    // Do "apt-get update" automatically every n-days (0=disable)
+    APT::Periodic::Update-Package-Lists "1";
+
+    // Do "apt-get upgrade --download-only" every n-days (0=disable)
+    APT::Periodic::Download-Upgradeable-Packages "1";
+
+    // Do "apt-get autoclean" every n-days (0=disable)
+    APT::Periodic::AutocleanInterval "7";
+
+    // Send report mail to root
+    //     0:  no report             (or null string)
+    //     1:  progress report       (actually any string)
+    //     2:  + command outputs     (remove -qq, remove 2>/dev/null, add -d)
+    //     3:  + trace on
+    APT::Periodic::Verbose "2";
+    APT::Periodic::Unattended-Upgrade "1";
+
+    // Automatically upgrade packages from these
+    Unattended-Upgrade::Origins-Pattern {
+          "o=Debian,a=stable";
+          "o=Debian,a=stable-updates";
+          "origin=Debian,codename=${distro_codename},label=Debian-Security";
+    };
+
+    // You can specify your own packages to NOT automatically upgrade here
+    Unattended-Upgrade::Package-Blacklist {
+    };
+
+    // Run dpkg --force-confold --configure -a if a unclean dpkg state is detected
+    Unattended-Upgrade::AutoFixInterruptedDpkg "true";
+
+    // Perform the upgrade when the machine is running
+    Unattended-Upgrade::InstallOnShutdown "false";
+
+    // Send an email to this address with information about the packages upgraded
+    Unattended-Upgrade::Mail "root";
+
+    // Always send an e-mail
+    Unattended-Upgrade::MailOnlyOnError "false";
+
+    // Remove all unused dependencies after the upgrade has finished
+    Unattended-Upgrade::Remove-Unused-Dependencies "true";
+
+    // Remove any new unused dependencies after the upgrade has finished
+    Unattended-Upgrade::Remove-New-Unused-Dependencies "true";
+
+    // Automatically reboot WITHOUT CONFIRMATION if the file /var/run/reboot-required is found
+    Unattended-Upgrade::Automatic-Reboot "true";
+
+    // Automatically reboot even if users are logged in
+    Unattended-Upgrade::Automatic-Reboot-WithUsers "true";
+    ```
+  </Step>
+
+  <Step title="Test the configuration">
+    Run a dry-run to verify your configuration:
+    
+    ```bash
+    sudo unattended-upgrade -d --dry-run
+    ```
+    
+    If there are no errors, the configuration is correct. To run it immediately:
+    
+    ```bash
+    sudo unattended-upgrade -d
+    ```
+  </Step>
+
+  <Step title="Configure apt-listchanges">
+    Configure apt-listchanges to your preferences:
+    
+    ```bash
+    sudo dpkg-reconfigure apt-listchanges
+    ```
+    
+    Follow the prompts to set your email and notification preferences.
+  </Step>
+
+  <Step title="Configure apticron">
+    The default settings are good, but you can customize them in `/etc/apticron/apticron.conf`.
+    
+    Example configuration:
+    
+    ```bash
+    EMAIL="root"
+    NOTIFY_NO_UPDATES="1"
+    ```
+    
+    This will:
+    - Send emails to root
+    - Notify even when there are no updates (so you know it's working)
+  </Step>
+</Steps>
+
+## Understanding the Configuration
+
+### APT::Periodic Options
+
+These control how often automated tasks run:
+
+| Option | Value | Description |
+|--------|-------|-------------|
+| `Update-Package-Lists` | 1 | Update package lists daily |
+| `Download-Upgradeable-Packages` | 1 | Download updates daily |
+| `AutocleanInterval` | 7 | Clean old packages weekly |
+| `Unattended-Upgrade` | 1 | Apply upgrades daily |
+
+### Unattended-Upgrade Options
+
+| Option | Setting | Description |
+|--------|---------|-------------|
+| `Origins-Pattern` | Debian stable, stable-updates, security | Which repositories to auto-upgrade from |
+| `Package-Blacklist` | Empty | Packages to never auto-upgrade |
+| `Mail` | root | Email address for notifications |
+| `MailOnlyOnError` | false | Send email for all upgrades, not just errors |
+| `Automatic-Reboot` | true | Automatically reboot if kernel updated |
+| `Automatic-Reboot-WithUsers` | true | Reboot even with users logged in |
+
+<Warning>
+**Automatic Reboot Settings**
+
+The configuration includes automatic reboots when necessary (e.g., kernel updates). This ensures security patches are fully applied, but means your server may reboot unexpectedly.
+
+If you prefer manual reboots, change:
+```
+Unattended-Upgrade::Automatic-Reboot "false";
+```
+</Warning>
+
+## Blacklisting Packages
+
+To prevent specific packages from being automatically upgraded, add them to the blacklist:
+
+```
+Unattended-Upgrade::Package-Blacklist {
+    "nginx";
+    "apache2";
+    "postgresql";
+};
+```
+
+## Monitoring
+
+### Check Upgrade Logs
+
+View what unattended-upgrades has done:
+
+```bash
+sudo cat /var/log/unattended-upgrades/unattended-upgrades.log
+```
+
+### Check Last Run
+
+```bash
+sudo cat /var/log/unattended-upgrades/unattended-upgrades-dpkg.log
+```
+
+### Check for Pending Updates
+
+```bash
+sudo apt update
+apt list --upgradable
+```
+
+## What This Does
+
+With automatic updates configured:
+
+<CardGroup cols={2}>
+  <Card title="Security Patches" icon="shield-check">
+    Critical security updates are applied automatically within 24 hours
+  </Card>
+  <Card title="Email Notifications" icon="envelope">
+    You receive emails about all updates and system changes
+  </Card>
+  <Card title="Stable Updates" icon="check">
+    Only tested, stable updates are applied automatically
+  </Card>
+  <Card title="System Cleanup" icon="broom">
+    Old packages are automatically cleaned up weekly
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+### Not Receiving Emails
+
+1. Verify your mail configuration:
+   ```bash
+   echo "Test" | mail -s "Test Email" root
+   ```
+
+2. Check mail logs:
+   ```bash
+   sudo tail -f /var/log/mail.log
+   ```
+
+### Updates Not Running
+
+1. Check the systemd timer:
+   ```bash
+   sudo systemctl status apt-daily-upgrade.timer
+   sudo systemctl status apt-daily.timer
+   ```
+
+2. Manually trigger an update:
+   ```bash
+   sudo unattended-upgrade -d
+   ```
+
+### Checking What Will Be Upgraded
+
+```bash
+sudo unattended-upgrade --dry-run -d
+```
+
+<Info>
+The configuration files in `/etc/apt/apt.conf.d/` are processed in numerical order. Our custom file `51myunattended-upgrades` overrides settings from the default `50unattended-upgrades`.
+</Info>

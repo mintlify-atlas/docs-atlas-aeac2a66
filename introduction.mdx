@@ -1,0 +1,164 @@
+---
+title: Introduction
+description: Learn how to secure a Linux server with comprehensive security hardening techniques and best practices
+---
+
+<img
+  className="block dark:hidden"
+  src="https://mintlify-assets.b-cdn.net/bigbend.jpg"
+  alt="Linux Server Security"
+/>
+<img
+  className="hidden dark:block"
+  src="https://mintlify-assets.b-cdn.net/bigbend.jpg"
+  alt="Linux Server Security"
+/>
+
+## Welcome to Linux Server Security
+
+An evolving how-to guide for securing a Linux server that teaches you about security fundamentals and why they matter. This guide covers everything from SSH hardening to intrusion detection, helping you protect your server from unauthorized access and attacks.
+
+<CardGroup cols={2}>
+  <Card
+    title="Getting Started"
+    icon="rocket"
+    href="/getting-started/principles"
+  >
+    Learn the fundamentals and prepare your server for hardening
+  </Card>
+  <Card
+    title="SSH Security"
+    icon="lock"
+    href="/ssh/overview"
+  >
+    Secure your SSH server with public/private keys and configuration hardening
+  </Card>
+  <Card
+    title="Network Security"
+    icon="shield"
+    href="/network/ufw"
+  >
+    Configure firewalls and intrusion detection systems
+  </Card>
+  <Card
+    title="Auditing & Monitoring"
+    icon="magnifying-glass"
+    href="/auditing/lynis"
+  >
+    Monitor your server and detect potential security threats
+  </Card>
+</CardGroup>
+
+## Why Secure Your Server
+
+The moment a device becomes visible to the outside world, it becomes a target for bad actors. An unsecured server is a playground for attackers who want:
+
+- Access to your data
+- To use your server as a node in large-scale DDOS attacks
+- To covertly steal data without leaving traces
+- To compromise your system for their nefarious purposes
+
+Without proper security, you may never know if your server has been compromised. Bad actors don't always change things or lock you out—sometimes they just silently copy your data or use your resources.
+
+## What This Guide Covers
+
+<AccordionGroup>
+  <Accordion title="SSH Server Hardening">
+    - Public/private key authentication
+    - SSH configuration best practices
+    - Two-factor authentication
+    - Removing weak encryption keys
+  </Accordion>
+
+  <Accordion title="Basic Security">
+    - User access control (sudo/su)
+    - Application sandboxing with FireJail
+    - Secure password policies
+    - Automatic security updates
+  </Accordion>
+
+  <Accordion title="Network Protection">
+    - Firewall configuration with UFW
+    - Intrusion detection with PSAD
+    - Application protection with Fail2Ban
+    - Collaborative security with CrowdSec
+  </Accordion>
+
+  <Accordion title="System Auditing">
+    - File integrity monitoring with AIDE
+    - Anti-virus scanning with ClamAV
+    - Rootkit detection with Rkhunter
+    - Security auditing with Lynis
+    - Host intrusion detection with OSSEC
+  </Accordion>
+
+  <Accordion title="Advanced Hardening">
+    - Linux kernel sysctl parameters
+    - Web server security (nginx)
+    - Advanced security configurations
+  </Accordion>
+</AccordionGroup>
+
+## Guide Philosophy
+
+<Note>
+This guide is intended to be followed in order, as some sections depend on previous configurations. However, you can skip sections that don't apply to your use case.
+</Note>
+
+### What This Guide Is
+
+- **Work in progress** - Continuously evolving with new security techniques
+- **Distribution agnostic** - Applicable to most Linux distributions
+- **Practical and actionable** - Includes copy-paste commands and real examples
+- **Educational** - Explains the "why" behind security measures
+
+### What This Guide Is Not
+
+- **Not a Linux tutorial** - Assumes basic Linux knowledge
+- **Not exhaustive** - Covers server security, not all aspects like physical security
+- **Not one-size-fits-all** - Your security needs may vary based on your threat model
+
+## Before You Start
+
+<Warning>
+Before implementing security measures, identify your threat model and understand what you're protecting against. Consider:
+
+- Why you want to secure your server
+- How much security you need vs. convenience
+- What attack vectors are relevant to your situation
+- Whether you have recovery options if you lock yourself out
+</Warning>
+
+## Quick Navigation
+
+<CardGroup cols={3}>
+  <Card
+    title="Choose a Distribution"
+    icon="linux"
+    href="/getting-started/picking-distribution"
+  >
+    Pick the right Linux distribution for your server
+  </Card>
+  <Card
+    title="Installation Requirements"
+    icon="list-check"
+    href="/getting-started/requirements"
+  >
+    Pre and post installation checklist
+  </Card>
+  <Card
+    title="Automate with Ansible"
+    icon="robot"
+    href="/getting-started/ansible"
+  >
+    Use Ansible playbooks to automate security hardening
+  </Card>
+</CardGroup>
+
+## Community & Contributions
+
+This guide is open source and accepts contributions. If you find errors, have suggestions, or want to add new security techniques, please contribute on [GitHub](https://github.com/imthenachoman/How-To-Secure-A-Linux-Server).
+
+<Info>
+For comprehensive industry-standard security benchmarks, also review the [CIS Benchmarks](https://www.cisecurity.org/cis-benchmarks/) after completing this guide.
+</Info>

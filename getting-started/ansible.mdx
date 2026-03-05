@@ -1,0 +1,226 @@
+---
+title: "Using Ansible Playbooks"
+description: "Automate Linux server security with Ansible playbooks based on this guide"
+---
+
+Ansible playbooks of this guide are available at [How To Secure A Linux Server With Ansible](https://github.com/moltenbit/How-To-Secure-A-Linux-Server-With-Ansible).
+
+<Warning>
+Make sure to edit the variables according to your needs and read all tasks beforehand to confirm it does not break your system. After running the playbooks ensure that all settings are configured to your needs!
+</Warning>
+
+## Prerequisites
+
+<Steps>
+  <Step title="Install Ansible">
+    Install Ansible on your control machine (the computer you'll run the playbooks from).
+    
+    ```bash
+    # On Debian/Ubuntu
+    sudo apt update
+    sudo apt install ansible
+    
+    # On macOS
+    brew install ansible
+    
+    # Using pip
+    pip install ansible
+    ```
+    
+    <Note>
+    See the [official Ansible installation guide](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html) for more options.
+    </Note>
+  </Step>
+  
+  <Step title="Clone the Repository">
+    Clone the Ansible playbooks repository:
+    
+    ```bash
+    git clone https://github.com/moltenbit/How-To-Secure-A-Linux-Server-With-Ansible.git
+    cd How-To-Secure-A-Linux-Server-With-Ansible
+    ```
+  </Step>
+  
+  <Step title="Create SSH Keys">
+    Create SSH public/private key pairs for secure authentication:
+    
+    ```bash
+    ssh-keygen -t ed25519
+    ```
+    
+    <Note>
+    Press Enter to accept the default location, and optionally set a passphrase for additional security.
+    </Note>
+  </Step>
+  
+  <Step title="Configure Variables">
+    Edit the variables file to match your environment:
+    
+    ```bash
+    nano group_vars/variables.yml
+    ```
+    
+    Change all variables according to your needs, including:
+    - Username and password
+    - SSH port
+    - Firewall rules
+    - Any other customizations
+  </Step>
+  
+  <Step title="Enable SSH Root Access (Temporarily)">
+    Before running the playbooks, temporarily enable SSH root access on your target server:
+    
+    ```bash
+    nano /etc/ssh/sshd_config
+    ```
+    
+    Find and modify:
+    
+    ```
+    PermitRootLogin yes
+    ```
+    
+    Then restart SSH:
+    
+    ```bash
+    sudo systemctl restart sshd
+    ```
+    
+    <Warning>
+    This is temporary! The playbooks will disable root login as part of the hardening process.
+    </Warning>
+  </Step>
+  
+  <Step title="Configure Static IP (Recommended)">
+    It's recommended to configure a static IP address on your system before running the playbooks.
+  </Step>
+  
+  <Step title="Add Server to Inventory">
+    Add your server's IP address to the `hosts.yml` file:
+    
+    ```yaml
+    all:
+      hosts:
+        your-server:
+          ansible_host: 192.168.1.100
+    ```
+  </Step>
+</Steps>
+
+## Running the Playbooks
+
+### Requirements Playbook
+
+Run the requirements playbook first, using the root password you specified during server installation:
+
+```bash
+ansible-playbook --inventory hosts.yml --ask-pass requirements-playbook.yml
+```
+
+<Note>
+This playbook sets up the initial requirements before the main hardening process.
+</Note>
+
+### Main Playbook
+
+Run the main playbook with the new user's password you specified in the `variables.yml` file:
+
+```bash
+ansible-playbook --inventory hosts.yml --ask-pass main-playbook.yml
+```
+
+### Subsequent Runs
+
+If you need to run the playbooks multiple times, use the SSH key and the new SSH port:
+
+```bash
+ansible-playbook --inventory hosts.yml \
+  -e ansible_ssh_port=SSH_PORT \
+  --key-file /PATH/TO/SSH/KEY \
+  main-playbook.yml
+```
+
+<Note>
+Replace `SSH_PORT` with your configured SSH port and `/PATH/TO/SSH/KEY` with the path to your SSH private key.
+</Note>
+
+## What Gets Configured
+
+The Ansible playbooks automate the following security configurations:
+
+<CardGroup cols={2}>
+  <Card title="SSH Hardening" icon="lock">
+    - Disable root login
+    - Configure SSH keys
+    - Set secure SSH options
+    - Change default SSH port
+  </Card>
+  
+  <Card title="Firewall Configuration" icon="shield">
+    - Install and configure UFW
+    - Set up default deny policies
+    - Allow specified services
+  </Card>
+  
+  <Card title="User Management" icon="users">
+    - Create limited user accounts
+    - Configure sudo access
+    - Set up proper groups
+  </Card>
+  
+  <Card title="System Hardening" icon="server">
+    - Install security updates
+    - Configure fail2ban
+    - Set up automatic updates
+    - Additional hardening measures
+  </Card>
+</CardGroup>
+
+## Post-Playbook Verification
+
+<Steps>
+  <Step title="Verify SSH Access">
+    Test SSH access with your new configuration:
+    
+    ```bash
+    ssh -p YOUR_SSH_PORT user@server-ip
+    ```
+  </Step>
+  
+  <Step title="Check Firewall Status">
+    Verify firewall is active and configured correctly:
+    
+    ```bash
+    sudo ufw status
+    ```
+  </Step>
+  
+  <Step title="Review Logs">
+    Check system logs for any issues:
+    
+    ```bash
+    sudo journalctl -xe
+    ```
+  </Step>
+  
+  <Step title="Test Services">
+    Ensure all required services are running and accessible.
+  </Step>
+</Steps>
+
+<Warning>
+**Important:** After running the playbooks, thoroughly test all functionality before deploying to production. Make sure you can still access your server and all required services are working.
+</Warning>
+
+## Troubleshooting
+
+If you encounter issues:
+
+1. **Check Ansible output** - The playbook provides detailed output about each task
+2. **Verify variables** - Ensure all variables in `variables.yml` are correct
+3. **Test connectivity** - Make sure you can reach the target server
+4. **Review logs** - Check both Ansible logs and system logs on the target server
+
+<Note>
+For detailed manual configuration steps, refer to the other sections of this guide. The Ansible playbooks are a convenient automation layer on top of the manual processes.
+</Note>

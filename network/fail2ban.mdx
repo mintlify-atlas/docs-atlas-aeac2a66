@@ -1,0 +1,188 @@
+---
+title: Application Intrusion Detection And Prevention With Fail2Ban
+description: Monitor application logs and prevent intrusions by blocking suspicious activity
+---
+
+## Why Use Fail2Ban
+
+UFW tells your server what doors to board up so nobody can see them, and what doors to allow authorized users through. PSAD monitors network activity to detect and prevent potential intrusions -- repeated attempts to get in.
+
+But what about the applications/services your server is running, like SSH and Apache, where your firewall is configured to allow access in? Even though access may be allowed that doesn't mean all access attempts are valid and harmless. What if someone tries to brute-force their way in to a web-app you're running on your server? This is where Fail2ban comes in.
+
+## How It Works
+
+Fail2ban monitors the logs of your applications (like SSH and Apache) to detect and prevent potential intrusions. It will monitor network traffic/logs and prevent intrusions by blocking suspicious activity (e.g. multiple successive failed connections in a short time-span).
+
+<Note>
+- As of right now, the only thing running on this server is SSH so we'll want Fail2ban to monitor SSH and ban as necessary.
+- As you install other programs, you'll need to create/configure the appropriate jails and enable them.
+</Note>
+
+## Installation and Configuration
+
+<Steps>
+
+<Step title="Install Fail2ban">
+
+On Debian based systems:
+
+```bash
+sudo apt install fail2ban
+```
+
+</Step>
+
+<Step title="Create Local Configuration">
+
+<Warning>
+We don't want to edit `/etc/fail2ban/fail2ban.conf` or `/etc/fail2ban/jail.conf` because a future update may overwrite those, so we'll create a local copy instead.
+</Warning>
+
+Create the file `/etc/fail2ban/jail.local` and add this to it after replacing `[LAN SEGMENT]` and `[your email]` with the appropriate values:
+
+```ini
+[DEFAULT]
+# the IP address range we want to ignore
+ignoreip = 127.0.0.1/8 [LAN SEGMENT]
+
+# who to send e-mail to
+destemail = [your e-mail]
+
+# who is the email from
+sender = [your e-mail]
+
+# since we're using exim4 to send emails
+mta = mail
+
+# get email alerts
+action = %(action_mwl)s
+```
+
+<Note>
+Your server will need to be able to send e-mails so Fail2ban can let you know of suspicious activity and when it banned an IP.
+</Note>
+
+</Step>
+
+<Step title="Create SSH Jail">
+
+We need to create a jail for SSH that tells fail2ban to look at SSH logs and use UFW to ban/unban IPs as needed.
+
+Create the file `/etc/fail2ban/jail.d/ssh.local` and add this:
+
+```ini
+[sshd]
+enabled = true
+banaction = ufw
+port = ssh
+filter = sshd
+logpath = %(sshd_log)s
+maxretry = 5
+```
+
+Or use this quick command:
+
+```bash
+cat << EOF | sudo tee /etc/fail2ban/jail.d/ssh.local
+[sshd]
+enabled = true
+banaction = ufw
+port = ssh
+filter = sshd
+logpath = %(sshd_log)s
+maxretry = 5
+EOF
+```
+
+<Info>
+In the above we tell fail2ban to use UFW as the `banaction`. Fail2ban ships with an action configuration file for UFW. You can see it in `/etc/fail2ban/action.d/ufw.conf`.
+</Info>
+
+</Step>
+
+<Step title="Enable Fail2ban">
+
+Start and enable Fail2ban:
+
+```bash
+sudo fail2ban-client start
+sudo fail2ban-client reload
+sudo fail2ban-client add sshd  # This may fail on some systems if the sshd jail was added by default
+```
+
+</Step>
+
+<Step title="Check Fail2ban Status">
+
+To check the overall status:
+
+```bash
+sudo fail2ban-client status
+```
+
+Example output:
+
+```
+Status
+|- Number of jail:      1
+`- Jail list:   sshd
+```
+
+To check the status of a specific jail:
+
+```bash
+sudo fail2ban-client status sshd
+```
+
+Example output:
+
+```
+Status for the jail: sshd
+|- Filter
+|  |- Currently failed: 0
+|  |- Total failed:     0
+|  `- File list:        /var/log/auth.log
+`- Actions
+   |- Currently banned: 0
+   |- Total banned:     0
+   `- Banned IP list:
+```
+
+</Step>
+
+</Steps>
+
+## Unban an IP Address
+
+To unban an IP address, use this command:
+
+```bash
+fail2ban-client set [jail] unbanip [IP]
+```
+
+Where:
+- `[jail]` is the name of the jail that has the banned IP
+- `[IP]` is the IP address you want to unban
+
+For example, to unban `192.168.1.100` from SSH:
+
+```bash
+fail2ban-client set sshd unbanip 192.168.1.100
+```
+
+## Custom Jails
+
+<Info>
+Custom jails can be created for other services like Apache, Nginx, or custom applications. The process involves:
+
+1. Creating a filter file in `/etc/fail2ban/filter.d/` that defines the log patterns to match
+2. Creating a jail configuration in `/etc/fail2ban/jail.d/` that references the filter
+3. Enabling the jail with `fail2ban-client`
+
+Refer to the [Fail2ban documentation](https://www.fail2ban.org/) for detailed instructions on creating custom jails.
+</Info>
+
+## Reference
+
+- [Fail2ban Official Website](https://www.fail2ban.org/)
+- [Fail2ban with UFW Guide](https://blog.vigilcode.com/2011/05/ufw-with-fail2ban-quick-secure-setup-part-ii/)

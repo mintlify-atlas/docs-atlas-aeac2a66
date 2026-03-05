@@ -1,0 +1,74 @@
+---
+title: Create SSH Group For AllowGroups
+description: Control SSH access using UNIX groups
+---
+
+## Why
+
+To make it easy to control who can SSH to the server. By using a group, we can quickly add/remove accounts to the group to quickly allow or not allow SSH access to the server.
+
+## How It Works
+
+We will use the `AllowGroups` option in SSH's configuration file `/etc/ssh/sshd_config` to tell the SSH server to only allow users to SSH in if they are a member of a certain UNIX group. Anyone not in the group will not be able to SSH in.
+
+## Goals
+
+- A UNIX group that we'll use in the SSH configuration to limit who can SSH to the server
+
+<Note>
+This is a prerequisite step to support the `AllowGroups` setting that will be configured in [Secure `/etc/ssh/sshd_config`](/ssh/sshd-config).
+</Note>
+
+## Steps
+
+<Steps>
+  <Step title="Create the SSH users group">
+    Create a group called `sshusers`:
+
+    ```bash
+    sudo groupadd sshusers
+    ```
+  </Step>
+
+  <Step title="Add users to the group">
+    Add account(s) to the group:
+
+    ```bash
+    sudo usermod -a -G sshusers user1
+    sudo usermod -a -G sshusers user2
+    sudo usermod -a -G sshusers ...
+    ```
+
+    <Warning>
+    You'll need to do this for **every account** on your server that needs SSH access. If you forget to add your own account, you may lock yourself out!
+    </Warning>
+  </Step>
+
+  <Step title="Verify group membership">
+    You can verify which users are in the group:
+
+    ```bash
+    getent group sshusers
+    ```
+
+    This will show output like:
+
+    ```
+    sshusers:x:1001:user1,user2
+    ```
+  </Step>
+</Steps>
+
+## What's Next?
+
+After creating the group and adding users, you'll configure the SSH server to use this group in [Secure `/etc/ssh/sshd_config`](/ssh/sshd-config).
+
+<Tip>
+You can add or remove users from the `sshusers` group at any time to control SSH access without having to modify the SSH configuration file.
+</Tip>
+
+## References
+
+- `man groupadd`
+- `man usermod`
+- `man getent`

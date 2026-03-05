@@ -1,0 +1,146 @@
+---
+title: "Rootkit Detection With Rkhunter"
+description: "Detect rootkits, backdoors, and local exploits on your Linux server using Rootkit Hunter"
+---
+
+<Warning>
+This section is a work in progress and may be incomplete. The instructions provided should work, but additional details and explanations may be added in future updates.
+</Warning>
+
+## Why
+
+Rootkits are malicious software that give attackers privileged access to your system while hiding their presence. Rkhunter (Rootkit Hunter) scans for known rootkits, backdoors, and security exploits on your Linux system.
+
+## How It Works
+
+Rkhunter performs various security checks including:
+- Scanning for known rootkit files and directories
+- Checking for suspicious strings in kernel modules
+- Verifying file integrity of system commands
+- Detecting hidden files and processes
+- Checking for suspicious network activity
+
+## Goals
+
+- Rkhunter installed and configured to scan for rootkits daily
+- Automatic email notifications when threats are detected
+
+## References
+
+- http://rkhunter.sourceforge.net/
+- https://www.cyberciti.biz/faq/howto-check-linux-rootkist-with-detectors-software/
+- https://www.tecmint.com/install-rootkit-hunter-scan-for-rootkits-backdoors-in-linux/
+
+## Installation and Setup
+
+<Steps>
+  <Step title="Install Rkhunter">
+    On Debian based systems:
+
+    ```bash
+    sudo apt install rkhunter
+    ```
+  </Step>
+
+  <Step title="Backup the defaults file">
+    Make a backup of rkhunter's defaults file:
+
+    ```bash
+    sudo cp -p /etc/default/rkhunter /etc/default/rkhunter-COPY-$(date +"%Y%m%d%H%M%S")
+    ```
+  </Step>
+
+  <Step title="Create a local configuration file">
+    Instead of modifying the main configuration file `/etc/rkhunter.conf`, create and use `/etc/rkhunter.conf.local`:
+
+    ```bash
+    sudo cp -p /etc/rkhunter.conf /etc/rkhunter.conf.local
+    ```
+
+    <Info>
+    Using a `.local` configuration file prevents your changes from being overwritten during updates.
+    </Info>
+  </Step>
+
+  <Step title="Configure rkhunter">
+    Edit `/etc/rkhunter.conf.local` with these recommended settings:
+
+    | Setting | Value | Note |
+    |---------|-------|------|
+    | `UPDATE_MIRRORS` | `1` | Enable mirror updates |
+    | `MIRRORS_MODE` | `0` | Use mirrors for updates |
+    | `MAIL-ON-WARNING` | `root` | Email warnings to root |
+    | `COPY_LOG_ON_ERROR` | `1` | Save log copy on errors |
+    | `PKGMGR` | (varies) | Set to your package manager (e.g., `DPKG` for Debian) |
+    | `PHALANX2_DIRTEST` | `1` | Enable additional directory tests |
+    | `WEB_CMD` | `""` | Disable web-based updates (Debian package issue workaround) |
+    | `USE_LOCKING` | `1` | Prevent multiple simultaneous runs |
+    | `SHOW_SUMMARY_WARNINGS_NUMBER` | `1` | Show count of warnings found |
+
+    <Note>
+    Setting `WEB_CMD=""` addresses an issue with the Debian package that disables rkhunter's self-update ability.
+    </Note>
+  </Step>
+
+  <Step title="Enable daily scans">
+    On Debian based systems, enable the daily cron jobs. Check `/etc/default/rkhunter` or use:
+
+    ```bash
+    sudo dpkg-reconfigure rkhunter
+    ```
+
+    Answer `Yes` to all questions to enable daily scans and email reports.
+  </Step>
+
+  <Step title="Validate configuration">
+    Verify all settings are valid:
+
+    ```bash
+    sudo rkhunter -C
+    ```
+
+    This checks for configuration errors before running scans.
+  </Step>
+
+  <Step title="Update rkhunter">
+    Update rkhunter and its database:
+
+    ```bash
+    sudo rkhunter --versioncheck
+    sudo rkhunter --update
+    sudo rkhunter --propupd
+    ```
+
+    - `--versioncheck` - Checks for newer versions
+    - `--update` - Updates the detection signatures
+    - `--propupd` - Updates the file properties database
+  </Step>
+</Steps>
+
+## Manual Scanning
+
+To perform a manual scan and see the output interactively:
+
+```bash
+sudo rkhunter --check
+```
+
+This will scan your system and display results. Press Enter to continue through each section.
+
+<Tip>
+Run rkhunter manually after system updates to update its baseline and avoid false positives.
+</Tip>
+
+## Updating the Database
+
+After making legitimate system changes (like kernel updates or installing new software), update rkhunter's database:
+
+```bash
+sudo rkhunter --propupd
+```
+
+This prevents false warnings about changed system files.
+
+## Automated Daily Scans
+
+When properly configured, rkhunter will run daily via cron and email you the results. You can customize the scan script or check example scripts at the references above.
