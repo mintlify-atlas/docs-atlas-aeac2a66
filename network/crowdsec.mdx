@@ -82,27 +82,27 @@ CrowdSec includes a CLI tool to check the status of the Security Engine and the 
 sudo cscli metrics
 ```
 
-Example output:
+    Example output:
 
-```
-Acquisition Metrics:
-╭────────────────────────┬────────────┬──────────────┬────────────────┬────────────────────────┬───────────────────╮
-│ Source                 │ Lines read │ Lines parsed │ Lines unparsed │ Lines poured to bucket │ Lines whitelisted │
-├────────────────────────┼────────────┼──────────────┼────────────────┼────────────────────────┼───────────────────┤
-│ file:/var/log/auth.log │ 5          │ 4            │ 1              │ 10                     │ -                 │
-│ file:/var/log/syslog   │ 30         │ -            │ 30             │ -                      │ -                 │
-╰────────────────────────┴────────────┴──────────────┴────────────────┴────────────────────────┴───────────────────╯
+    ```text
+    Acquisition Metrics:
+    ╭────────────────────────┬────────────┬──────────────┬────────────────┬────────────────────────┬───────────────────╮
+    │ Source                 │ Lines read │ Lines parsed │ Lines unparsed │ Lines poured to bucket │ Lines whitelisted │
+    ├────────────────────────┼────────────┼──────────────┼────────────────┼────────────────────────┼───────────────────┤
+    │ file:/var/log/auth.log │ 5          │ 4            │ 1              │ 10                     │ -                 │
+    │ file:/var/log/syslog   │ 30         │ -            │ 30             │ -                      │ -                 │
+    ╰────────────────────────┴────────────┴──────────────┴────────────────┴────────────────────────┴───────────────────╯
 
-Local API Decisions:
-╭────────────────────────────────────────────┬────────┬────────┬───────╮
-│ Reason                                     │ Origin │ Action │ Count │
-├────────────────────────────────────────────┼────────┼────────┼───────┤
-│ crowdsecurity/http-backdoors-attempts      │ CAPI   │ ban    │ 73    │
-│ crowdsecurity/http-bad-user-agent          │ CAPI   │ ban    │ 4836  │
-│ crowdsecurity/ssh-slow-bf                  │ CAPI   │ ban    │ 3412  │
-│ crowdsecurity/ssh-bf                       │ CAPI   │ ban    │ 2000  │
-╰────────────────────────────────────────────┴────────┴────────┴───────╯
-```
+    Local API Decisions:
+    ╭────────────────────────────────────────────┬────────┬────────┬───────╮
+    │ Reason                                     │ Origin │ Action │ Count │
+    ├────────────────────────────────────────────┼────────┼────────┼───────┤
+    │ crowdsecurity/http-backdoors-attempts      │ CAPI   │ ban    │ 73    │
+    │ crowdsecurity/http-bad-user-agent          │ CAPI   │ ban    │ 4836  │
+    │ crowdsecurity/ssh-slow-bf                  │ CAPI   │ ban    │ 3412  │
+    │ crowdsecurity/ssh-bf                       │ CAPI   │ ban    │ 2000  │
+    ╰────────────────────────────────────────────┴────────┴────────┴───────╯
+    ```
 
 ### Understanding the Metrics
 

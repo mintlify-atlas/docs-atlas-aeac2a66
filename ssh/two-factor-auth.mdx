@@ -73,7 +73,7 @@ We will use Google's `libpam-google-authenticator` PAM module to create and veri
 
     You'll see output like:
 
-    ```
+    ```text
     Do you want authentication tokens to be time-based (y/n) y
     https://www.google.com/chart?chs=200x200&chld=M|0&cht=qr&chl=otpauth://totp/user@host%3Fsecret%3DR4ZWX34FQKZROVX7AGLJ64684Y%26issuer%3Dhost
 
@@ -126,7 +126,7 @@ We will use Google's `libpam-google-authenticator` PAM module to create and veri
 
     Now enable it as an authentication method for SSH by adding this line to `/etc/pam.d/sshd`:
 
-    ```
+    ```text
     auth       required     pam_google_authenticator.so nullok
     ```
 
@@ -150,7 +150,7 @@ We will use Google's `libpam-google-authenticator` PAM module to create and veri
 
     Tell SSH to leverage challenge-response authentication by adding or editing this line in `/etc/ssh/sshd_config`:
 
-    ```
+    ```text
     ChallengeResponseAuthentication yes
     ```
 
@@ -215,7 +215,7 @@ This requires both a valid SSH key AND the 2FA code.
 
 Once all users have set up 2FA, edit `/etc/pam.d/sshd` and remove `nullok` from the line:
 
-```
+```text
 auth       required     pam_google_authenticator.so
 ```
 

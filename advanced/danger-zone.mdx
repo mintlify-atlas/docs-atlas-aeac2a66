@@ -67,7 +67,7 @@ grub-mkpasswd-pbkdf2 -c 100000
 
 You'll be prompted to enter a password:
 
-```
+```text
 Enter password:
 Reenter password:
 PBKDF2 hash of your password is grub.pbkdf2.sha512.100000.2812C233D...
@@ -136,7 +136,7 @@ If you have sudo [configured properly](/basics/sudo), then the root account will
 
 You may encounter this error during boot failures:
 
-```
+```text
 Cannot open access to console, the root account is locked.
 
 See sulogin(8) man page for more details.
@@ -283,10 +283,10 @@ Remove configuration files from removed packages:
 
 ```bash
 # List packages with residual config
-dpkg -l | grep ^rc
+dpkg -l | grep '^rc'
 
 # Remove residual configs
-sudo apt purge $(dpkg -l | grep ^rc | awk '{print $2}')
+sudo apt purge $(dpkg -l | grep '^rc' | awk '{print $2}')
 ```
 
 ## Recovery Procedures

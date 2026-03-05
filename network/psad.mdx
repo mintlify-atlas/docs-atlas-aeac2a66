@@ -126,16 +126,16 @@ Verify that PSAD can properly analyze your iptables rules:
 sudo psad --fw-analyze
 ```
 
-You should see output like:
+    You should see output like:
 
-```
-[+] Parsing INPUT chain rules.
-[+] Parsing INPUT chain rules.
-[+] Firewall config looks good.
-[+] Completed check of firewall ruleset.
-[+] Results in /var/log/psad/fw_check
-[+] Exiting.
-```
+    ```text
+    [+] Parsing INPUT chain rules.
+    [+] Parsing INPUT chain rules.
+    [+] Firewall config looks good.
+    [+] Completed check of firewall ruleset.
+    [+] Results in /var/log/psad/fw_check
+    [+] Exiting.
+    ```
 
 <Note>
 If there were any issues, you will get an e-mail with the error.
@@ -151,42 +151,42 @@ Verify PSAD is running correctly:
 sudo psad --Status
 ```
 
-Example output:
+    Example output:
 
-```
-[-] psad: pid file /var/run/psad/psadwatchd.pid does not exist for psadwatchd on vm
-[+] psad_fw_read (pid: 3444)  %CPU: 0.0  %MEM: 2.2
-    Running since: Sat Feb 16 01:03:09 2019
+    ```text
+    [-] psad: pid file /var/run/psad/psadwatchd.pid does not exist for psadwatchd on vm
+    [+] psad_fw_read (pid: 3444)  %CPU: 0.0  %MEM: 2.2
+        Running since: Sat Feb 16 01:03:09 2019
 
-[+] psad (pid: 3435)  %CPU: 0.2  %MEM: 2.7
-    Running since: Sat Feb 16 01:03:09 2019
-    Command line arguments: [none specified]
-    Alert email address(es): root@localhost
+    [+] psad (pid: 3435)  %CPU: 0.2  %MEM: 2.7
+        Running since: Sat Feb 16 01:03:09 2019
+        Command line arguments: [none specified]
+        Alert email address(es): root@localhost
 
-[+] Version: psad v2.4.3
+    [+] Version: psad v2.4.3
 
-[+] Top 50 signature matches:
-        [NONE]
+    [+] Top 50 signature matches:
+            [NONE]
 
-[+] Top 25 attackers:
-        [NONE]
+    [+] Top 25 attackers:
+            [NONE]
 
-[+] Top 20 scanned ports:
-        [NONE]
+    [+] Top 20 scanned ports:
+            [NONE]
 
-[+] iptables log prefix counters:
-        [NONE]
+    [+] iptables log prefix counters:
+            [NONE]
 
-    Total protocol packet counters:
+        Total protocol packet counters:
 
-[+] IP Status Detail:
-        [NONE]
+    [+] IP Status Detail:
+            [NONE]
 
-    Total scan sources: 0
-    Total scan destinations: 0
+        Total scan sources: 0
+        Total scan destinations: 0
 
-[+] These results are available in: /var/log/psad/status.out
-```
+    [+] These results are available in: /var/log/psad/status.out
+    ```
 
 </Step>
 

@@ -140,7 +140,7 @@ Unless you're setting up your own mail server, you need a way to send emails fro
 
     Add your Gmail credentials to `/etc/exim4/passwd.client`:
 
-    ```
+    ```text
     smtp.gmail.com:yourAccount@gmail.com:yourPassword
     *.google.com:yourAccount@gmail.com:yourPassword
     ```
@@ -172,7 +172,7 @@ Unless you're setting up your own mail server, you need a way to send emails fro
   <Step title="Configure TLS Settings">
     Create `/etc/exim4/exim4.conf.localmacros` with the following content:
 
-    ```
+    ```text
     MAIN_TLS_ENABLE = 1
     REMOTE_SMTP_SMARTHOST_HOSTS_REQUIRE_TLS = *
     TLS_ON_CONNECT_PORTS = 465
@@ -192,7 +192,7 @@ Unless you're setting up your own mail server, you need a way to send emails fro
 
     Add this block to `/etc/exim4/exim4.conf.template` after the `.ifdef REMOTE_SMTP_SMARTHOST_HOSTS_REQUIRE_TLS ... .endif` block:
 
-    ```
+    ```text
     .ifdef REQUIRE_PROTOCOL
       protocol = REQUIRE_PROTOCOL
     .endif
@@ -200,7 +200,7 @@ Unless you're setting up your own mail server, you need a way to send emails fro
 
     Add this block inside the `.ifdef MAIN_TLS_ENABLE` block:
 
-    ```
+    ```text
     .ifdef TLS_ON_CONNECT_PORTS
       tls_on_connect_ports = TLS_ON_CONNECT_PORTS
     .endif
@@ -219,7 +219,7 @@ Unless you're setting up your own mail server, you need a way to send emails fro
   <Step title="Configure Firewall (if using UFW)">
     Create `/etc/ufw/applications.d/smtptls`:
 
-    ```
+    ```text
     [SMTPTLS]
     title=SMTP through TLS
     description=This opens up the TLS port 465 for use with SMPT to send e-mails.
@@ -236,7 +236,7 @@ Unless you're setting up your own mail server, you need a way to send emails fro
   <Step title="Configure Mail Aliases">
     Add mail aliases to `/etc/aliases` for local accounts:
 
-    ```
+    ```text
     user1: user1@gmail.com
     user2: user2@gmail.com
     ```

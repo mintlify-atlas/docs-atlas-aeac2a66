@@ -120,13 +120,13 @@ To check the overall status:
 sudo fail2ban-client status
 ```
 
-Example output:
+    Example output:
 
-```
-Status
-|- Number of jail:      1
-`- Jail list:   sshd
-```
+    ```text
+    Status
+    |- Number of jail:      1
+    `- Jail list:   sshd
+    ```
 
 To check the status of a specific jail:
 
@@ -134,19 +134,19 @@ To check the status of a specific jail:
 sudo fail2ban-client status sshd
 ```
 
-Example output:
+    Example output:
 
-```
-Status for the jail: sshd
-|- Filter
-|  |- Currently failed: 0
-|  |- Total failed:     0
-|  `- File list:        /var/log/auth.log
-`- Actions
-   |- Currently banned: 0
-   |- Total banned:     0
-   `- Banned IP list:
-```
+    ```text
+    Status for the jail: sshd
+    |- Filter
+    |  |- Currently failed: 0
+    |  |- Total failed:     0
+    |  `- File list:        /var/log/auth.log
+    `- Actions
+       |- Currently banned: 0
+       |- Total banned:     0
+       `- Banned IP list:
+    ```
 
 </Step>
 

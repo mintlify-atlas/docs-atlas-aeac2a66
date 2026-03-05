@@ -30,7 +30,7 @@ By default, iptables logs are mixed with other system logs in `/var/log/syslog` 
   <Step title="Configure rsyslog">
     Create the file `/etc/rsyslog.d/10-iptables.conf` with the following content:
 
-    ```
+    ```text
     :msg, contains, "[IPTABLES] " /var/log/iptables.log
     & stop
     ```
@@ -43,7 +43,7 @@ By default, iptables logs are mixed with other system logs in `/var/log/syslog` 
     <Info>
       If you expect high-volume firewall logging, prefix the filename with a `-` to omit syncing after every write:
 
-      ```
+      ```text
       :msg, contains, "[IPTABLES] " -/var/log/iptables.log
       & stop
       ```
@@ -64,7 +64,7 @@ By default, iptables logs are mixed with other system logs in `/var/log/syslog` 
 
     Edit `/etc/psad/psad.conf` and set the `IPT_SYSLOG_FILE` parameter:
 
-    ```
+    ```text
     IPT_SYSLOG_FILE /var/log/iptables.log;
     ```
 
@@ -93,7 +93,7 @@ By default, iptables logs are mixed with other system logs in `/var/log/syslog` 
 
     Create `/etc/logrotate.d/iptables` with the following content:
 
-    ```
+    ```text
     /var/log/iptables.log
     {
         rotate 7

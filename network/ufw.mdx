@@ -49,14 +49,14 @@ Deny all outgoing traffic:
 sudo ufw default deny outgoing comment 'deny all outgoing traffic'
 ```
 
-You should see:
+    You should see:
 
-```
-Default outgoing policy changed to 'deny'
-(be sure to update your rules accordingly)
-```
+    ```text
+    Default outgoing policy changed to 'deny'
+    (be sure to update your rules accordingly)
+    ```
 
-<Info>
+    <Info>
 If you are not as paranoid and don't want to deny all outgoing traffic, you can allow it instead:
 
 ```bash
@@ -84,14 +84,14 @@ Obviously we want SSH connections in. Using `limit` instead of `allow` will auto
 sudo ufw limit in ssh comment 'allow SSH connections in'
 ```
 
-You should see:
+    You should see:
 
-```
-Rules updated
-Rules updated (v6)
-```
+    ```text
+    Rules updated
+    Rules updated (v6)
+    ```
 
-</Step>
+    </Step>
 
 <Step title="Allow Additional Traffic">
 
@@ -135,14 +135,14 @@ You'll need to allow HTTP/HTTPS for installing packages and many other things.
 sudo ufw enable
 ```
 
-You should see:
+    You should see:
 
-```
-Command may disrupt existing ssh connections. Proceed with operation (y|n)? y
-Firewall is active and enabled on system startup
-```
+    ```text
+    Command may disrupt existing ssh connections. Proceed with operation (y|n)? y
+    Firewall is active and enabled on system startup
+    ```
 
-</Step>
+    </Step>
 
 <Step title="Check UFW Status">
 
@@ -158,26 +158,26 @@ For more detailed information:
 sudo ufw status verbose
 ```
 
-Example output:
+    Example output:
 
-```
-Status: active
-Logging: on (low)
-Default: deny (incoming), deny (outgoing), disabled (routed)
-New profiles: skip
+    ```text
+    Status: active
+    Logging: on (low)
+    Default: deny (incoming), deny (outgoing), disabled (routed)
+    New profiles: skip
 
-To                         Action      From
---                         ------      ----
-22/tcp                     LIMIT IN    Anywhere                   # allow SSH connections in
-22/tcp (v6)                LIMIT IN    Anywhere (v6)              # allow SSH connections in
+    To                         Action      From
+    --                         ------      ----
+    22/tcp                     LIMIT IN    Anywhere                   # allow SSH connections in
+    22/tcp (v6)                LIMIT IN    Anywhere (v6)              # allow SSH connections in
 
-53                         ALLOW OUT   Anywhere                   # allow DNS calls out
-123                        ALLOW OUT   Anywhere                   # allow NTP out
-80/tcp                     ALLOW OUT   Anywhere                   # allow HTTP traffic out
-443/tcp                    ALLOW OUT   Anywhere                   # allow HTTPS traffic out
-```
+    53                         ALLOW OUT   Anywhere                   # allow DNS calls out
+    123                        ALLOW OUT   Anywhere                   # allow NTP out
+    80/tcp                     ALLOW OUT   Anywhere                   # allow HTTP traffic out
+    443/tcp                    ALLOW OUT   Anywhere                   # allow HTTPS traffic out
+    ```
 
-</Step>
+    </Step>
 
 </Steps>
 
@@ -203,7 +203,7 @@ sudo ufw app list
 
 Example output:
 
-```
+```text
 Available applications:
   AIM
   Bonjour
@@ -237,7 +237,7 @@ sudo ufw app info DNS
 
 Output:
 
-```
+```text
 Profile: DNS
 Title: Internet Domain Name Server
 Description: Internet Domain Name Server
