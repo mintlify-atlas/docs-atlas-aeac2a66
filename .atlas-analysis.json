@@ -1,0 +1,116 @@
+{
+  "projectType": "general",
+  "projectName": "How To Secure A Linux Server",
+  "projectDescription": "An evolving how-to guide for securing a Linux server that teaches security fundamentals and best practices.",
+  "theme": "aspen",
+  "primaryColor": "#DC143C",
+  "lightColor": null,
+  "darkColor": null,
+  "navigation": {
+    "groups": [
+      {
+        "group": "Overview",
+        "pages": [
+          "introduction",
+          "guide-overview",
+          "contributing"
+        ]
+      },
+      {
+        "group": "Getting Started",
+        "pages": [
+          "getting-started/principles",
+          "getting-started/picking-distribution",
+          "getting-started/installation",
+          "getting-started/requirements",
+          "getting-started/ansible"
+        ]
+      },
+      {
+        "group": "SSH Security",
+        "pages": [
+          "ssh/overview",
+          "ssh/public-private-keys",
+          "ssh/ssh-group",
+          "ssh/sshd-config",
+          "ssh/diffie-hellman",
+          "ssh/two-factor-auth"
+        ]
+      },
+      {
+        "group": "Basic Security",
+        "pages": [
+          "basics/sudo",
+          "basics/su",
+          "basics/firejail",
+          "basics/ntp",
+          "basics/proc",
+          "basics/passwords",
+          "basics/updates",
+          "basics/entropy",
+          "basics/panic-password"
+        ]
+      },
+      {
+        "group": "Network Security",
+        "pages": [
+          "network/ufw",
+          "network/psad",
+          "network/fail2ban",
+          "network/crowdsec"
+        ]
+      },
+      {
+        "group": "Auditing & Monitoring",
+        "pages": [
+          "auditing/aide",
+          "auditing/clamav",
+          "auditing/rkhunter",
+          "auditing/chkrootkit",
+          "auditing/logwatch",
+          "auditing/ss",
+          "auditing/lynis",
+          "auditing/ossec"
+        ]
+      },
+      {
+        "group": "Advanced Hardening",
+        "pages": [
+          "advanced/kernel-sysctl",
+          "advanced/nginx",
+          "advanced/danger-zone"
+        ]
+      },
+      {
+        "group": "Additional Resources",
+        "pages": [
+          "resources/email-setup",
+          "resources/iptables-logging",
+          "resources/helpful-links"
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Comprehensive SSH server hardening",
+    "Firewall configuration with UFW",
+    "Intrusion detection with PSAD, Fail2Ban, and CrowdSec",
+    "Security auditing with Lynis, OSSEC, and Rkhunter",
+    "Kernel hardening with sysctl parameters",
+    "Automatic security updates and alerts",
+    "File integrity monitoring with AIDE",
+    "Multi-factor authentication setup"
+  ],
+  "publicApiSurface": [
+    "SSH configuration hardening",
+    "UFW firewall rules",
+    "Fail2Ban jail configurations",
+    "CrowdSec security engine",
+    "AIDE file integrity monitoring",
+    "Lynis security auditing",
+    "OSSEC host intrusion detection",
+    "Kernel sysctl parameters",
+    "Password policy enforcement",
+    "Automated security updates"
+  ]
+}
